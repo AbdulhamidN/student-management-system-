@@ -13,6 +13,9 @@
  * - Soft delete student
  * - Get total active student count
  * - Get students by department
+ * - Assign course to student
+ * - Get student's courses
+ * - Remove course from student
  * =====================================================
  */
 
@@ -212,6 +215,113 @@ exports.getStudentsByDepartment = async (req, res) => {
         res.json({
             success: true,
             data: students
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
+/**
+ * ASSIGN COURSE TO STUDENT
+ * POST /api/students/:id/courses
+ */
+exports.assignCourse = async (req, res) => {
+    try {
+        const studentId = req.params.id;
+        const { courseId } = req.body;
+
+        // Validation
+        if (!courseId) {
+            return res.status(400).json({
+                success: false,
+                message: "Course ID is required"
+            });
+        }
+
+        // Check if student exists and is not deleted
+        const student = await studentModel.getStudentById(studentId);
+        if (!student) {
+            return res.status(404).json({
+                success: false,
+                message: "Student not found"
+            });
+        }
+
+        const result = await studentModel.assignCourseToStudent(studentId, courseId);
+
+        res.status(201).json({
+            success: true,
+            message: "Course assigned to student successfully"
+        });
+    } catch (error) {
+        if (error.message === "Course already assigned to this student") {
+            return res.status(409).json({
+                success: false,
+                message: error.message
+            });
+        }
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
+/**
+ * GET ALL COURSES FOR A STUDENT
+ * GET /api/students/:id/courses
+ */
+exports.getStudentCourses = async (req, res) => {
+    try {
+        const studentId = req.params.id;
+
+        // Check if student exists
+        const student = await studentModel.getStudentById(studentId);
+        if (!student) {
+            return res.status(404).json({
+                success: false,
+                message: "Student not found"
+            });
+        }
+
+        const courses = await studentModel.getStudentCourses(studentId);
+
+        res.json({
+            success: true,
+            data: courses
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
+/**
+ * REMOVE COURSE FROM STUDENT
+ * DELETE /api/students/:id/courses/:courseId
+ */
+exports.removeCourseFromStudent = async (req, res) => {
+    try {
+        const studentId = req.params.id;
+        const courseId = req.params.courseId;
+
+        const result = await studentModel.removeCourseFromStudent(studentId, courseId);
+
+        if (!result) {
+            return res.status(404).json({
+                success: false,
+                message: "Student or course not found"
+            });
+        }
+
+        res.json({
+            success: true,
+            message: "Course removed from student successfully"
         });
     } catch (error) {
         res.status(500).json({

@@ -13,11 +13,13 @@
  * - Soft delete student (set is_deleted = TRUE)
  * - Get total active student count
  * - Get students by department
+ * - Assign course to student
+ * - Get student's courses
+ * - Remove course from student
  * =====================================================
  */
 
 // Import database connection pool
-
 const { pool } = require("../config/db");
 
 /**
@@ -148,6 +150,58 @@ const getStudentsByDepartment = async (departmentId) => {
     return rows;
 };
 
+/**
+ * =====================================================
+ * ASSIGN COURSE TO STUDENT
+ * =====================================================
+ * Adds a record in the student_courses junction table
+ */
+const assignCourseToStudent = async (studentId, courseId) => {
+    try {
+        const [result] = await pool.execute(
+            'INSERT INTO student_courses (student_id, course_id) VALUES (?, ?)',
+            [studentId, courseId]
+        );
+        return result;
+    } catch (error) {
+        if (error.code === 'ER_DUP_ENTRY') {
+            throw new Error('Course already assigned to this student');
+        }
+        throw error;
+    }
+};
+
+/**
+ * =====================================================
+ * GET ALL COURSES FOR A STUDENT
+ * =====================================================
+ * Returns all courses enrolled by a specific student
+ */
+const getStudentCourses = async (studentId) => {
+    const [rows] = await pool.execute(`
+        SELECT c.*, d.name AS department_name
+        FROM courses c
+        JOIN student_courses sc ON c.id = sc.course_id
+        LEFT JOIN departments d ON c.department_id = d.id
+        WHERE sc.student_id = ?
+    `, [studentId]);
+    return rows;
+};
+
+/**
+ * =====================================================
+ * REMOVE COURSE FROM STUDENT
+ * =====================================================
+ * Deletes a record from the student_courses junction table
+ */
+const removeCourseFromStudent = async (studentId, courseId) => {
+    const [result] = await pool.execute(
+        'DELETE FROM student_courses WHERE student_id = ? AND course_id = ?',
+        [studentId, courseId]
+    );
+    return result.affectedRows > 0;
+};
+
 // Export functions
 module.exports = {
     createStudent,
@@ -156,5 +210,8 @@ module.exports = {
     updateStudent,
     deleteStudent,
     getActiveStudentCount,
-    getStudentsByDepartment
+    getStudentsByDepartment,
+    assignCourseToStudent,
+    getStudentCourses,
+    removeCourseFromStudent
 };
