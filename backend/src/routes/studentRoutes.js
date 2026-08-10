@@ -15,20 +15,14 @@
  * =====================================================
  */
 
-
 // Import express router
 const express = require("express");
-
 
 // Create router object
 const router = express.Router();
 
-
 // Import controller functions
-const studentController =
-    require("../controllers/studentController");
-
-
+const studentController = require("../controllers/studentController");
 
 /**
  * =====================================================
@@ -44,22 +38,18 @@ const studentController =
  * Request Body:
  *
  * {
- *   "name":"Abebe",
- *   "email":"abebe@gmail.com",
- *   "department":"Computer Science"
+ *   "name": "Abebe",
+ *   "email": "abebe@gmail.com",
+ *   "phone": "1234567890",
+ *   "department_id": 1
  * }
  *
  */
-
-router.post("/",studentController.createStudent);
-
-
-
-
+router.post("/", studentController.createStudent);
 
 /**
  * =====================================================
- * GET ALL STUDENTS
+ * GET ALL ACTIVE STUDENTS
  * =====================================================
  *
  * HTTP Method:
@@ -68,10 +58,54 @@ router.post("/",studentController.createStudent);
  * URL:
  * /api/students
  *
+ * Description:
+ * Returns all students where is_deleted = FALSE
+ *
  */
+router.get("/", studentController.getAllStudents);
 
-router.get( "/",studentController.getAllStudents);
+/**
+ * =====================================================
+ * GET TOTAL ACTIVE STUDENTS COUNT
+ * =====================================================
+ *
+ * HTTP Method:
+ * GET
+ *
+ * URL:
+ * /api/students/count
+ *
+ * Description:
+ * Returns the total number of active students
+ *
+ * Response:
+ * {
+ *   "success": true,
+ *   "count": 5
+ * }
+ *
+ */
+router.get("/count", studentController.getStudentCount);
 
+/**
+ * =====================================================
+ * GET STUDENTS BY DEPARTMENT
+ * =====================================================
+ *
+ * HTTP Method:
+ * GET
+ *
+ * URL:
+ * /api/students/department/:deptId
+ *
+ * Example:
+ * /api/students/department/1
+ *
+ * Description:
+ * Returns all active students belonging to a specific department
+ *
+ */
+router.get("/department/:deptId", studentController.getStudentsByDepartment);
 
 /**
  * =====================================================
@@ -85,16 +119,10 @@ router.get( "/",studentController.getAllStudents);
  * /api/students/:id
  *
  * Example:
- *
  * /api/students/1
  *
  */
-
-router.get("/:id",studentController.getStudentById);
-
-
-
-
+router.get("/:id", studentController.getStudentById);
 
 /**
  * =====================================================
@@ -108,20 +136,22 @@ router.get("/:id",studentController.getStudentById);
  * /api/students/:id
  *
  * Example:
- *
  * PUT /api/students/1
  *
+ * Request Body:
+ * {
+ *   "name": "Abebe",
+ *   "email": "abebe@gmail.com",
+ *   "phone": "1234567890",
+ *   "department_id": 1
+ * }
+ *
  */
-
-router.put("/:id",studentController.updateStudent);
-
-
-
-
+router.put("/:id", studentController.updateStudent);
 
 /**
  * =====================================================
- * DELETE STUDENT
+ * SOFT DELETE STUDENT
  * =====================================================
  *
  * HTTP Method:
@@ -130,13 +160,11 @@ router.put("/:id",studentController.updateStudent);
  * URL:
  * /api/students/:id
  *
+ * Description:
+ * Sets is_deleted = TRUE instead of permanently deleting
+ *
  */
-
-router.delete("/:id",studentController.deleteStudent);
-
-
-
-
+router.delete("/:id", studentController.deleteStudent);
 
 // Export router
 module.exports = router;

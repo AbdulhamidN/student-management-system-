@@ -128,8 +128,8 @@ app.use(logger);
  */
 
 
-const studentRoutes =
-require("./routes/studentRoutes");
+const studentRoutes = require("./routes/studentRoutes");
+const departmentRoutes = require("./routes/departmentRoutes");
 
 
 
@@ -142,7 +142,7 @@ app.use(
     studentRoutes
 
 );
-
+app.use("/api/departments", departmentRoutes);
 
 
 
