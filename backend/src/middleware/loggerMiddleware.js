@@ -3,42 +3,22 @@
  * loggerMiddleware.js
  * -----------------------------------------------------
  * Purpose:
- * Log every incoming HTTP request.
+ * Log HTTP requests with status code and response time.
  *
- * Example:
- *
- * GET /api/students
- *
+ * Uses res.on('finish') to capture status code.
  * =====================================================
  */
 
+const logger = (req, res, next) => {
+    const start = Date.now();
 
-const logger = (req,res,next)=>{
-
-
-    console.log(
-        `${req.method} ${req.originalUrl}`
-    );
-
-
-    console.log(
-        "Time:",
-        new Date().toISOString()
-    );
-
-
-    /**
-     * next()
-     *
-     * Important:
-     * It passes control to the next middleware
-     * or route controller.
-     */
+    // Log when the response is finished
+    res.on('finish', () => {
+        const duration = Date.now() - start;
+        console.log(`${req.method} ${req.originalUrl} - ${res.statusCode} - ${duration}ms`);
+    });
 
     next();
-
 };
-
-
 
 module.exports = logger;
