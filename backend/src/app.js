@@ -14,241 +14,70 @@
  * 5. Handle unknown routes (404)
  * 6. Handle application errors
  * 7. Export configured app
- *
  * =====================================================
  */
-
 
 // Import Express framework
 const express = require("express");
 
-
-
 // Create Express application
 const app = express();
-
-
-
-
 
 /**
  * =====================================================
  * 1. BUILT-IN MIDDLEWARE
  * =====================================================
  */
-
-
-// Allows Express to read JSON data
-//
-// Example request body:
-//
-// {
-//    "name":"Getachew",
-//    "email":"test@gmail.com"
-// }
-//
-// Access using:
-// req.body.name
-
 app.use(express.json());
-
-
-
-
-// Allows receiving form data
-//
-// Example:
-// name=Getachew&email=test@gmail.com
-
-app.use(
-    express.urlencoded({
-        extended:true
-    })
-);
-
-
-
-
-
-
+app.use(express.urlencoded({ extended: true }));
 
 /**
  * =====================================================
  * 2. CUSTOM LOGGER MIDDLEWARE
  * =====================================================
- *
- * Purpose:
- * Display every incoming request.
- *
- * Example output:
- *
- * GET /api/students
- *
  */
-
-
-const logger =
-require("./middleware/loggerMiddleware");
-
-
-// Every request passes through logger
-
+const logger = require("./middleware/loggerMiddleware");
 app.use(logger);
-
-
-
-
-
-
 
 /**
  * =====================================================
  * 3. ROUTES
  * =====================================================
- *
- * Import student routes.
- *
- * Actual routes:
- *
- * POST
- *      /api/students
- *
- * GET
- *      /api/students
- *
- * GET
- *      /api/students/:id
- *
- * PUT
- *      /api/students/:id
- *
- * DELETE
- *      /api/students/:id
- *
  */
-
-
 const studentRoutes = require("./routes/studentRoutes");
 const departmentRoutes = require("./routes/departmentRoutes");
+const courseRoutes = require("./routes/courseRoutes");
 
-
-
-// Register student routes
-
-app.use(
-
-    "/api/students",
-
-    studentRoutes
-
-);
+app.use("/api/students", studentRoutes);
 app.use("/api/departments", departmentRoutes);
-
-
-
-
-
+app.use("/api/courses", courseRoutes);  // <-- ADD THIS
 
 /**
  * =====================================================
  * 4. ROOT ROUTE
  * =====================================================
- *
- * Purpose:
- * Check whether API is running.
- *
- * URL:
- *
- * GET /
- *
  */
-
-
-app.get("/",(req,res)=>{
-
-
+app.get("/", (req, res) => {
     res.json({
-
-        success:true,
-
-        message:
-        "Welcome to Student Management API"
-
+        success: true,
+        message: "Welcome to Student Management API"
     });
-
-
 });
-
-
-
-
-
-
-
 
 /**
  * =====================================================
  * 5. 404 NOT FOUND MIDDLEWARE
  * =====================================================
- *
- * IMPORTANT:
- *
- * This must come AFTER routes.
- *
- * If no route matches,
- * this middleware executes.
- *
  */
-
-
-const notFound =
-require("./middleware/notFoundMiddleware");
-
-
+const notFound = require("./middleware/notFoundMiddleware");
 app.use(notFound);
-
-
-
-
-
-
-
 
 /**
  * =====================================================
  * 6. GLOBAL ERROR HANDLER
  * =====================================================
- *
- * IMPORTANT:
- *
- * This must be the LAST middleware.
- *
- * Handles all application errors.
- *
  */
-
-
-const errorHandler =
-require("./middleware/errorMiddleware");
-
-
+const errorHandler = require("./middleware/errorMiddleware");
 app.use(errorHandler);
-
-
-
-
-
-
-
-/**
- * =====================================================
- * EXPORT APPLICATION
- * =====================================================
- *
- * server.js imports this app
- *
- * =====================================================
- */
-
 
 module.exports = app;
