@@ -17,7 +17,8 @@
  */
 
 // Import database connection pool
-const pool = require("../config/db");
+
+const { pool } = require("../config/db");
 
 /**
  * =====================================================
