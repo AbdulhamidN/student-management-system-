@@ -109,6 +109,59 @@ router.get("/department/:deptId", studentController.getStudentsByDepartment);
 
 /**
  * =====================================================
+ * ASSIGN COURSE TO STUDENT
+ * =====================================================
+ *
+ * HTTP Method:
+ * POST
+ *
+ * URL:
+ * /api/students/:id/courses
+ *
+ * Request Body:
+ * {
+ *   "courseId": 2
+ * }
+ *
+ */
+router.post("/:id/courses", studentController.assignCourse);
+
+/**
+ * =====================================================
+ * GET STUDENT'S COURSES
+ * =====================================================
+ *
+ * HTTP Method:
+ * GET
+ *
+ * URL:
+ * /api/students/:id/courses
+ *
+ * Description:
+ * Returns all courses enrolled by a specific student
+ *
+ */
+router.get("/:id/courses", studentController.getStudentCourses);
+
+/**
+ * =====================================================
+ * REMOVE COURSE FROM STUDENT
+ * =====================================================
+ *
+ * HTTP Method:
+ * DELETE
+ *
+ * URL:
+ * /api/students/:id/courses/:courseId
+ *
+ * Example:
+ * /api/students/1/courses/2
+ *
+ */
+router.delete("/:id/courses/:courseId", studentController.removeCourseFromStudent);
+
+/**
+ * =====================================================
  * GET STUDENT BY ID
  * =====================================================
  *
@@ -120,6 +173,10 @@ router.get("/department/:deptId", studentController.getStudentsByDepartment);
  *
  * Example:
  * /api/students/1
+ *
+ * NOTE:
+ * This must come AFTER the specific routes above
+ * to avoid conflicts (e.g., /count, /department, /courses)
  *
  */
 router.get("/:id", studentController.getStudentById);
