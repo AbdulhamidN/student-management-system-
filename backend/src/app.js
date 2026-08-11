@@ -20,6 +20,9 @@
 // Import Express framework
 const express = require("express");
 
+// Import CORS (Cross-Origin Resource Sharing)
+const cors = require("cors");
+
 // Create Express application
 const app = express();
 
@@ -28,7 +31,14 @@ const app = express();
  * 1. BUILT-IN MIDDLEWARE
  * =====================================================
  */
+
+// Enable CORS for all routes (MUST come before routes)
+app.use(cors());
+
+// Allows Express to read JSON data
 app.use(express.json());
+
+// Allows receiving form data
 app.use(express.urlencoded({ extended: true }));
 
 /**
@@ -50,7 +60,7 @@ const courseRoutes = require("./routes/courseRoutes");
 
 app.use("/api/students", studentRoutes);
 app.use("/api/departments", departmentRoutes);
-app.use("/api/courses", courseRoutes);  // <-- ADD THIS
+app.use("/api/courses", courseRoutes);
 
 /**
  * =====================================================
