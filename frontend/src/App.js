@@ -6,49 +6,29 @@ import StudentList from './components/Students/StudentList';
 import StudentForm from './components/Students/StudentForm';
 import DepartmentFilter from './components/Filters/DepartmentFilter';
 import CourseAssignModal from './components/Courses/CourseAssignModal';
-import { getStudentsByDepartment } from './api/students';
 
 function App() {
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [showForm, setShowForm] = useState(false);
     const [editingStudent, setEditingStudent] = useState(null);
     const [assigningStudent, setAssigningStudent] = useState(null);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
-    const [selectedDepartment, setSelectedDepartment] = useState(null);
-    const [filteredStudents, setFilteredStudents] = useState(null);
+
+    const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+    const closeSidebar = () => setIsSidebarOpen(false);
 
     const handleRefresh = () => {
-        setRefreshTrigger(prev => prev + 1);
-        setFilteredStudents(null);
-        setSelectedDepartment(null);
-    };
-
-    const handleDepartmentFilter = async (deptId) => {
-        setSelectedDepartment(deptId);
-        if (deptId) {
-            try {
-                const students = await getStudentsByDepartment(deptId);
-                setFilteredStudents(students);
-            } catch (err) {
-                console.error('Filter failed:', err);
-                setFilteredStudents([]);
-            }
-        } else {
-            setFilteredStudents(null);
-        }
         setRefreshTrigger(prev => prev + 1);
     };
 
     return (
-        <div className="flex min-h-screen bg-gray-50">
-            <Sidebar />
-            <div className="flex-1 flex flex-col">
-                <Header />
+        <div className="flex min-h-screen bg-gray-50 overflow-x-hidden">
+            <Sidebar isOpen={isSidebarOpen} onClose={closeSidebar} />
+            <div className="flex-1 flex flex-col min-h-screen w-full">
+                <Header onToggleSidebar={toggleSidebar} />
                 <main className="flex-1 container mx-auto px-4 py-8">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-                        <DepartmentFilter
-                            selectedDepartment={selectedDepartment}
-                            onSelect={handleDepartmentFilter}
-                        />
+                        <DepartmentFilter />
                         <button
                             onClick={() => { setEditingStudent(null); setShowForm(true); }}
                             className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors flex items-center shadow-md"
