@@ -1,62 +1,69 @@
-Student Management — Mobile (React Native / Expo)
-<p align="center"> <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=22&pause=1000&color=F5B301&center=true&vCenter=true&width=460&lines=Welcome+to+GRPUP+WORK;Student+Registry+App;Built+with+React+Native+%2B+Expo;Styled+with+NativeWind" alt="Typing SVG" /> </p>
+# 🎓 Student Management System
 
-A native companion app to the existing web frontend, talking to the same Express + MySQL backend (/api/students, /api/departments, /api/courses).
+![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
+![Jest](https://img.shields.io/badge/Jest-C21325?style=for-the-badge&logo=jest&logoColor=white)
+![JSON Server](https://img.shields.io/badge/JSON_Server-000000?style=for-the-badge&logo=json&logoColor=white)
 
-Design system
-Palette: warm parchment background + ink text, with a rotating "signature color" per department (navy, brass, forest, burgundy, teal, plum, clay, olive). The same department always resolves to the same color everywhere — student rows, badges, course chips, department cards — so the color itself communicates "which department" at a glance.
-Type: Fraunces (serif display) for headings, Inter for UI text, IBM Plex Mono for course codes/IDs — reads like an academic ledger.
-Signature element: the student "ledger row" — a colored spine on the left edge of each card, keyed to that student's department.
+A modern, fully responsive Student Management Dashboard built with React, featuring full CRUD operations, advanced filtering, and a comprehensive dark mode implementation. This project includes robust Unit, Integration, and End-to-End (E2E) testing documentation as part of a Quality Assurance assessment.
 
-All tokens live in src/theme/ — edit colors/fonts there, nothing is hardcoded in the screens.
+---
 
-Entry gateway & dashboard (new)
+## 📖 Table of Contents
 
-The app now opens on a Login screen, styled as a navy + gold "entry gateway" (hero banner + sign-in card), with a Signup screen modeled on a classic student-registration layout. After sign in/up, the app lands on a Dashboard tab with stat cards and quick actions, then the existing Students/Departments registry.
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Project Structure](#project-structure)
+- [Installation & Setup](#installation--setup)
+- [How to Run the App](#how-to-run-the-app)
+- [Running Tests (QA)](#running-tests-qa)
+- [Screenshots & Demo](#screenshots--demo)
+- [Challenges Faced](#challenges-faced)
+- [Contributing](#contributing)
+- [License](#license)
 
-src/screens/LoginScreen.js / SignupScreen.js / DashboardScreen.js — new screens, styled with NativeWind (Tailwind for React Native).
-assets/images/ — reference banner images used as backgrounds (hero-mastery.jpg on Login/Dashboard, ref-signup.jpg on Signup). Swap these for your own artwork any time — same filenames, same spot.
-tailwind.config.js — brand tokens (navy, gold, paper, ink…) used via className in the three new screens. The rest of the app still uses the original src/theme/ tokens — both systems can coexist.
-Sign in/up is currently client-side only (no backend auth endpoint exists yet) — it validates the form, then routes into the app. Wire it to a real /api/auth endpoint whenever the backend adds one.
-1. Install
-bash
-cd mobile
-npm install
-2. Point the app at your backend — the important part
+---
 
-Unlike a website, a phone (physical device or emulator) is a different machine from your laptop. http://localhost:5000 on the phone means the phone itself, not your computer running the API. You must use your computer's LAN IP address instead.
+## ✨ Features
 
-Find your computer's local IP:
-macOS/Linux: ifconfig | grep inet (or ipconfig getifaddr en0)
-Windows: ipconfig → look for "IPv4 Address" (something like 192.168.1.23)
-Open mobile/app.json and set it under expo.extra.apiBaseUrl:
-json
-   "extra": {
-     "apiBaseUrl": "http://192.168.1.23:5000/api"
-   }
-Make sure your backend is actually listening on that network, not just 127.0.0.1 (the default Express app.listen(PORT, ...) already binds to all interfaces, so this is usually fine as-is).
-Your phone and computer must be on the same Wi-Fi network.
+- **Admin Panel Layout:** Clean sidebar navigation with active state highlighting using `react-router-dom` `NavLink`.
+- **CRUD Operations (via Mock API):** 
+  - ➕ **Create:** Add new students using a beautiful, dark-mode ready custom modal.
+  - ✏️ **Update:** Edit student details via a pre-filled modal.
+  - ❌ **Soft-Delete:** Remove students with a confirmation prompt.
+- **Search & Filtering:** Dynamic filtering of students by Department using a select dropdown.
+- **Assign Courses:** Ability to assign a course to individual students with instant user feedback.
+- **Dark Mode:** Fully integrated Tailwind CSS dark mode with a persistent toggle switch in the header.
+- **Error Handling:** Gracefully handles invalid inputs (missing name) and missing API connections without crashing the application.
+- **Mock Backend:** Simulated REST API using `json-server` for persistent local data.
 
-Android emulator only: you can alternatively use http://10.0.2.2:5000/api, which the Android emulator maps back to your host machine.
+---
 
-Note: CORS (the browser restriction) does not apply to this native app — that's only relevant to the web frontend in /frontend. Still, the backend CORS fix has been applied so the web app works too.
+## 💻 Tech Stack
 
-3. Run
-bash
-npm start
+- **Frontend:** React (Create React App), React Router DOM v6
+- **Styling:** Tailwind CSS
+- **State Management:** React Hooks (useState, useEffect)
+- **Mock Backend:** json-server
+- **Testing:** Jest, React Testing Library
 
-Scan the QR code with Expo Go (iOS/Android), or press a / i for an emulator.
+---
 
-4. Backend must be running
-bash
-cd ../backend
-npm install
-npm run dev
+## 📁 Project Structure
 
-Make sure backend/.env has real DB credentials and the MySQL schema from database/schema.sql has been imported.
-
-Group
-Role	Members
-Admin	Abdulmajid Nuuri
-Frontend	Hayidar, Adnan
-Backend	Caala, Abdulhamid Nuri
+```text
+Student Management/
+├── frontend/                 <-- Main React application folder
+│   ├── public/               # Static assets
+│   ├── src/
+│   │   ├── components/       # Reusable UI components
+│   │   │   ├── Layout/       # Header, Sidebar, Footer
+│   │   │   └── Students/     # StudentList and StudentForm (Modal)
+│   │   ├── layouts/          # AdminLayout wrapper (Sidebar & Outlet)
+│   │   ├── pages/            # Dashboard, Students, Courses, Departments
+│   │   ├── App.jsx           # Main Application + Routing & Dark Mode Logic
+│   │   └── index.js          # Entry point
+│   ├── db.json               # Mock database file (json-server)
+│   ├── package.json          # Dependencies and run scripts
+│   └── tailwind.config.js    # Tailwind CSS configuration
+└── README.md                 # Project documentation
