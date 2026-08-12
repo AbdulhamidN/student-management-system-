@@ -22,16 +22,18 @@ const DepartmentFilter = ({ selectedDepartment, onSelect }) => {
 
     const handleChange = (e) => {
         const value = e.target.value;
-        onSelect(value || null);
+        if (onSelect) {
+            onSelect(value || null);
+        }
     };
 
     return (
         <div className="flex items-center space-x-2">
-            <FaFilter className="text-gray-400" />
+            <FaFilter className="text-gray-400 dark:text-gray-500" />
             <select
                 value={selectedDepartment || ''}
                 onChange={handleChange}
-                className="border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-white min-w-[180px]"
+                className="border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-white dark:bg-gray-700 text-gray-900 dark:text-white min-w-[180px]"
                 disabled={loading}
             >
                 <option value="">All Departments</option>
