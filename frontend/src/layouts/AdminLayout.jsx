@@ -1,24 +1,25 @@
-import { Link, Outlet } from 'react-router-dom';
+﻿import { NavLink, Outlet } from 'react-router-dom';
 
 const AdminLayout = ({ darkMode, toggleDarkMode }) => {
   return (
     <div className="flex h-screen dark:bg-gray-900 dark:text-white">
-      <aside className="w-64 bg-gray-800 text-white p-4">
-        <nav className="space-y-4">
-          <Link to="/dashboard" className="block py-2 hover:bg-gray-700 px-2 rounded">Dashboard</Link>
-          <Link to="/students" className="block py-2 hover:bg-gray-700 px-2 rounded">Students</Link>
-          <Link to="/courses" className="block py-2 hover:bg-gray-700 px-2 rounded">Courses</Link>
-          <Link to="/departments" className="block py-2 hover:bg-gray-700 px-2 rounded">Departments</Link>
+      <aside className="w-64 bg-gray-800 text-white p-4 flex flex-col">
+        <div className="mb-8 text-xl font-bold px-2">Admin Panel</div>
+        <nav className="space-y-2 flex-1">
+          <NavLink to="/dashboard" className={({ isActive }) => `block py-2 px-4 rounded transition-colors ${isActive ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'}`}>Dashboard</NavLink>
+          <NavLink to="/students" className={({ isActive }) => `block py-2 px-4 rounded transition-colors ${isActive ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'}`}>Students</NavLink>
+          <NavLink to="/courses" className={({ isActive }) => `block py-2 px-4 rounded transition-colors ${isActive ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'}`}>Courses</NavLink>
+          <NavLink to="/departments" className={({ isActive }) => `block py-2 px-4 rounded transition-colors ${isActive ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'}`}>Departments</NavLink>
         </nav>
       </aside>
-      <main className="flex-1 p-6 overflow-y-auto">
-        <div className="flex justify-between items-center mb-6 border-b pb-4">
-          <h1 className="text-2xl font-bold">Admin Panel</h1>
+
+      <main className="flex-1 p-6 overflow-y-auto bg-white dark:bg-gray-900">
+        <div className="flex justify-end items-center mb-6">
           <button 
             onClick={toggleDarkMode} 
-            className="p-2 rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+            className="p-2 rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors focus:outline-none"
           >
-            {darkMode ? '??' : '??'}
+            {darkMode ? '🌙' : '☀️'}
           </button>
         </div>
         <Outlet />
