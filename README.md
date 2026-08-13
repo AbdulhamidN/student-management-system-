@@ -1,62 +1,605 @@
-Student Management — Mobile (React Native / Expo)
-<p align="center"> <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=22&pause=1000&color=F5B301&center=true&vCenter=true&width=460&lines=Welcome+to+GRPUP+WORK;Student+Registry+App;Built+with+React+Native+%2B+Expo;Styled+with+NativeWind" alt="Typing SVG" /> </p>
+# Student Management System
 
-A native companion app to the existing web frontend, talking to the same Express + MySQL backend (/api/students, /api/departments, /api/courses).
+<p align="center">
+  <strong>A Full-Stack Student Management System</strong>
+</p>
 
-Design system
-Palette: warm parchment background + ink text, with a rotating "signature color" per department (navy, brass, forest, burgundy, teal, plum, clay, olive). The same department always resolves to the same color everywhere — student rows, badges, course chips, department cards — so the color itself communicates "which department" at a glance.
-Type: Fraunces (serif display) for headings, Inter for UI text, IBM Plex Mono for course codes/IDs — reads like an academic ledger.
-Signature element: the student "ledger row" — a colored spine on the left edge of each card, keyed to that student's department.
+<p align="center">
+  Built with React, Node.js, Express.js, and MySQL
+</p>
 
-All tokens live in src/theme/ — edit colors/fonts there, nothing is hardcoded in the screens.
+---
 
-Entry gateway & dashboard (new)
+## Overview
 
-The app now opens on a Login screen, styled as a navy + gold "entry gateway" (hero banner + sign-in card), with a Signup screen modeled on a classic student-registration layout. After sign in/up, the app lands on a Dashboard tab with stat cards and quick actions, then the existing Students/Departments registry.
+The **Student Management System** is a full-stack web application developed to manage students, departments, and courses.
 
-src/screens/LoginScreen.js / SignupScreen.js / DashboardScreen.js — new screens, styled with NativeWind (Tailwind for React Native).
-assets/images/ — reference banner images used as backgrounds (hero-mastery.jpg on Login/Dashboard, ref-signup.jpg on Signup). Swap these for your own artwork any time — same filenames, same spot.
-tailwind.config.js — brand tokens (navy, gold, paper, ink…) used via className in the three new screens. The rest of the app still uses the original src/theme/ tokens — both systems can coexist.
-Sign in/up is currently client-side only (no backend auth endpoint exists yet) — it validates the form, then routes into the app. Wire it to a real /api/auth endpoint whenever the backend adds one.
-1. Install
-bash
-cd mobile
+The project consists of a **React frontend**, an **Express.js REST API**, and a **MySQL relational database**.
+
+The system started from a basic single-table student database and was improved into a relational database structure that supports departments, courses, student-course enrollment, validation, and soft deletion.
+
+---
+
+## Features
+
+### Student Management
+
+- Create a student
+- View active students
+- View a single student
+- Update student information
+- Soft-delete students
+- Count active students
+- Filter students by department
+- View a student's courses
+- Assign courses to a student
+- Remove courses from a student
+
+Student information includes:
+
+- Name
+- Email
+- Phone
+- Department
+
+### Department Management
+
+The system supports:
+
+- Create department
+- View all departments
+- View a department by ID
+- Update department
+- Delete department
+
+Departments are stored separately from students instead of using a free-text department field.
+
+### Course Management
+
+The system supports:
+
+- Create courses
+- View courses
+- View a course by ID
+- Update courses
+- Delete courses
+- Associate courses with departments
+- Assign courses to students
+
+### Student–Course Relationship
+
+Students and courses have a **many-to-many relationship**.
+
+A student can enroll in multiple courses, while a course can have multiple students.
+
+This relationship is implemented using the:
+
+````text
+student_courses
+
+junction table.
+
+The system also prevents duplicate student-course assignments.
+
+# Soft Delete
+
+Students are soft-deleted instead of being permanently removed from the database.
+
+The students table contains an:
+
+is_deleted
+
+field.
+
+When a student is deleted, the record remains in the database while being excluded from active student queries.
+
+ Department Filtering
+
+The frontend provides a department filter that allows users to display students belonging to a selected department.
+
+ Validation & Error Handling
+
+The application includes:
+
+Required-field validation
+Loading states
+Empty states
+Error messages
+Request logging
+404 handling
+Centralized error handling
+ Technology Stack
+Layer	Technology
+Frontend	React
+Backend	Node.js
+Web Framework	Express.js
+Database	MySQL
+API	REST API
+Styling	Tailwind CSS
+HTTP Communication	Fetch API
+API Testing	Thunder Client
+Version Control	Git & GitHub
+ System Architecture
+                    ┌──────────────────────┐
+                    │    React Frontend    │
+                    │                      │
+                    │  Students            │
+                    │  Departments         │
+                    │  Courses             │
+                    │  Course Assignment   │
+                    └──────────┬───────────┘
+                               │
+                               │ HTTP / REST API
+                               ▼
+                    ┌──────────────────────┐
+                    │    Express.js API    │
+                    │                      │
+                    │ Routes               │
+                    │ Controllers          │
+                    │ Models               │
+                    │ Middleware           │
+                    └──────────┬───────────┘
+                               │
+                               │ SQL
+                               ▼
+                    ┌──────────────────────┐
+                    │       MySQL          │
+                    │                      │
+                    │ departments          │
+                    │ students             │
+                    │ courses              │
+                    │ student_courses      │
+                    └──────────────────────┘
+Request Flow
+React Frontend
+      ↓
+API Request
+      ↓
+Express Route
+      ↓
+Controller
+      ↓
+Model
+      ↓
+MySQL Database
+      ↓
+JSON Response
+      ↓
+React Frontend
+     Database Design
+
+The database is named:
+
+student_management
+
+The improved database contains four main tables.
+
+1. Departments
+departments
+├── id
+└── name
+
+A department can have multiple students and multiple courses.
+
+2. Students
+students
+├── id
+├── name
+├── email
+├── phone
+├── department_id
+├── is_deleted
+└── created_at
+
+department_id references the departments table.
+
+3. Courses
+courses
+├── id
+├── name
+├── code
+└── department_id
+
+department_id references the departments table.
+
+4. Student Courses
+student_courses
+├── student_id
+└── course_id
+
+This junction table implements the many-to-many relationship between students and courses.
+
+The combination of student_id and course_id forms the composite primary key.
+
+   Database Relationships
+Department
+    │
+    ├──────────< Students
+    │
+    └──────────< Courses
+
+Students
+    │
+    └──────────< Student_Courses >────────── Courses
+Relationships
+One department can have many students.
+One department can offer many courses.
+One student can enroll in many courses.
+One course can have many students.
+student_courses manages the many-to-many student-course relationship.
+Foreign keys maintain referential integrity.
+   Project Structure
+student-management-system/
+│
+├── backend/
+│   ├── .env.example
+│   ├── package.json
+│   ├── package-lock.json
+│   └── src/
+│       ├── app.js
+│       ├── server.js
+│       │
+│       ├── config/
+│       │   └── db.js
+│       │
+│       ├── controllers/
+│       │   ├── courseController.js
+│       │   ├── departmentController.js
+│       │   └── studentController.js
+│       │
+│       ├── middleware/
+│       │   ├── errorMiddleware.js
+│       │   ├── loggerMiddleware.js
+│       │   └── notFoundMiddleware.js
+│       │
+│       ├── models/
+│       │   ├── courseModel.js
+│       │   ├── departmentModel.js
+│       │   └── studentModel.js
+│       │
+│       └── routes/
+│           ├── courseRoutes.js
+│           ├── departmentRoutes.js
+│           └── studentRoutes.js
+│
+├── database/
+│   └── schema.sql
+│
+├── frontend/
+│   ├── public/
+│   ├── package.json
+│   └── src/
+│       ├── api/
+│       │   ├── config.js
+│       │   ├── courses.js
+│       │   ├── departments.js
+│       │   └── students.js
+│       │
+│       ├── components/
+│       │   ├── Common/
+│       │   ├── Courses/
+│       │   ├── Dashboard/
+│       │   ├── Filters/
+│       │   ├── Layout/
+│       │   └── Students/
+│       │
+│       ├── App.js
+│       ├── App.css
+│       ├── index.css
+│       └── index.js
+│
+├── docs/
+│   ├── project_report.docx
+│   ├── test_plan.md
+│   └── screenshots/
+│
+├── tests/
+│   ├── unit/
+│   ├── integration/
+│   └── e2e/
+│
+├── .gitignore
+└── README.md
+🔌 REST API
+
+The backend runs on port 5000 during development.
+
+Base API path:
+
+/api
+   Student Endpoints
+Method	Endpoint	Description
+POST	/api/students	Create a student
+GET	/api/students	Get active students
+GET	/api/students/count	Get active student count
+GET	/api/students/department/:deptId	Get students by department
+GET	/api/students/:id	Get a student by ID
+PUT	/api/students/:id	Update a student
+DELETE	/api/students/:id	Soft-delete a student
+POST	/api/students/:id/courses	Assign a course to a student
+GET	/api/students/:id/courses	Get courses for a student
+DELETE	/api/students/:id/courses/:courseId	Remove a course from a student
+   Department Endpoints
+Method	Endpoint	Description
+POST	/api/departments	Create a department
+GET	/api/departments	Get all departments
+GET	/api/departments/:id	Get a department by ID
+PUT	/api/departments/:id	Update a department
+DELETE	/api/departments/:id	Delete a department
+   Course Endpoints
+Method	Endpoint	Description
+POST	/api/courses	Create a course
+GET	/api/courses	Get all courses
+GET	/api/courses/:id	Get a course by ID
+PUT	/api/courses/:id	Update a course
+DELETE	/api/courses/:id	Delete a course
+   Frontend
+
+The frontend is built with React and communicates with the backend through REST API requests.
+
+The frontend API configuration is located in:
+
+frontend/src/api/config.js
+
+During local development:
+
+Frontend → http://localhost:3000
+Backend  → http://localhost:5000
+
+The frontend uses the Fetch API to communicate with the backend.
+
+Frontend Components
+Students
+StudentList
+StudentForm
+
+Used for displaying and managing student records.
+
+Courses
+CourseAssignModal
+
+Used to assign courses to students.
+
+Filters
+DepartmentFilter
+Used to filter students by department.
+
+Dashboard
+StudentCount
+
+Displays the number of active students.
+
+Common Components
+Loader
+EmptyState
+ErrorMessage
+
+Provide reusable loading, empty, and error states.
+
+Layout
+Header
+
+Provides the main application header.
+
+   Installation & Setup
+Prerequisites
+
+Make sure the following are installed:
+
+Node.js
+npm
+MySQL
+Git
+1. Clone the Repository
+git clone https://github.com/AbdulhamidN/student-management-system.git
+
+Navigate into the project:
+
+cd student-management-system
+2. Set Up the Database
+
+Start MySQL and execute:
+
+database/schema.sql
+
+The schema creates the:
+
+student_management
+
+database and its required tables.
+
+The schema also contains sample data for demonstration and testing.
+
+3. Configure the Backend
+
+Navigate to the backend:
+
+cd backend
+
+Install dependencies:
+
 npm install
-2. Point the app at your backend — the important part
 
-Unlike a website, a phone (physical device or emulator) is a different machine from your laptop. http://localhost:5000 on the phone means the phone itself, not your computer running the API. You must use your computer's LAN IP address instead.
+Create a .env file based on:
 
-Find your computer's local IP:
-macOS/Linux: ifconfig | grep inet (or ipconfig getifaddr en0)
-Windows: ipconfig → look for "IPv4 Address" (something like 192.168.1.23)
-Open mobile/app.json and set it under expo.extra.apiBaseUrl:
-json
-   "extra": {
-     "apiBaseUrl": "http://192.168.1.23:5000/api"
-   }
-Make sure your backend is actually listening on that network, not just 127.0.0.1 (the default Express app.listen(PORT, ...) already binds to all interfaces, so this is usually fine as-is).
-Your phone and computer must be on the same Wi-Fi network.
+.env.example
 
-Android emulator only: you can alternatively use http://10.0.2.2:5000/api, which the Android emulator maps back to your host machine.
+Configure your local MySQL credentials.
 
-Note: CORS (the browser restriction) does not apply to this native app — that's only relevant to the web frontend in /frontend. Still, the backend CORS fix has been applied so the web app works too.
+Example:
 
-3. Run
-bash
-npm start
+PORT=5000
+DB_HOST=localhost
+DB_USER=root
+DB_PASSWORD=your_password
+DB_NAME=student_management
 
-Scan the QR code with Expo Go (iOS/Android), or press a / i for an emulator.
+Important: Never commit your .env file to GitHub because it may contain sensitive database credentials.
 
-4. Backend must be running
-bash
-cd ../backend
-npm install
+4. Start the Backend
+
+For development:
+
 npm run dev
 
-Make sure backend/.env has real DB credentials and the MySQL schema from database/schema.sql has been imported.
+The backend will run on:
 
-Group
-Role	Members
-Admin	Abdulmajid Nuuri
-Frontend	Hayidar, Adnan
-Backend	Caala, Abdulhamid Nuri
+http://localhost:5000
+5. Start the Frontend
+
+Open another terminal:
+
+cd frontend
+
+Install dependencies:
+
+npm install
+
+Start the React application:
+
+npm start
+
+The frontend will normally be available at:
+
+http://localhost:3000
+
+Make sure the backend and MySQL database are running before using the frontend.
+
+   Testing
+
+Testing was performed at multiple levels during development.
+
+API Testing
+
+Backend endpoints were tested using Thunder Client.
+
+Tested functionality includes:
+
+Creating students
+Student validation
+Updating students
+Soft-deleting students
+Counting active students
+Listing departments
+Listing courses
+Getting a course by ID
+Creating courses
+Updating courses
+Deleting courses
+Assigning courses to students
+Integration Testing
+
+The complete request-to-database flow was tested to verify that:
+
+Frontend / API Request
+        ↓
+Express Backend
+        ↓
+MySQL Database
+        ↓
+Backend Response
+
+worked correctly.
+
+End-to-End Testing
+
+The frontend was tested against the live backend and MySQL database to verify that real database data was rendered correctly.
+
+The tested frontend behavior included:
+
+Loading data
+Displaying students
+Displaying departments
+Student count
+Department filtering
+Empty states
+Error states
+
+The project report documents the test cases, actual results, and PASS status for the completed tests.
+
+    Documentation
+
+Additional project documentation is available in:
+
+docs/
+
+Important documentation includes:
+
+docs/project_report.docx
+docs/test_plan.md
+
+The project report documents:
+
+Original database structure
+Improved database design
+Entity relationships
+Backend development
+Frontend development
+API integration
+Testing
+Git and GitHub workflow
+Development challenges
+Final group reflection
+   Git & GitHub Workflow
+
+The project was developed using Git and GitHub.
+
+The development workflow included:
+
+Feature branches
+Meaningful incremental commits
+Pull requests
+Merging completed work into the main branch
+
+Repository:
+
+https://github.com/AbdulhamidN/student-management-system
+   Team Members & Responsibilities
+Member	                          Role
+Abdulhamid Nuri	Admin / Backend development and project administration
+Hayidar                      	Frontend Developer
+Adnan                       	Frontend Developer
+Chala Wodajo	               Report / Documentation
+
+  Configuration & Security
+
+Database credentials and other environment-specific values should be stored in:
+
+backend/.env
+
+A configuration template is provided as:
+
+backend/.env.example
+
+The .env file should not be committed to GitHub.
+
+   Future Improvements
+
+ future improvements include:
+
+User authentication
+Authorization and user roles
+Expanded automated test coverage
+Advanced search and filtering
+Pagination(adding the pages)
+Improved dashboard functionality
+More frontend testing and at the end
+Production deployment
+   Project Status
+
+The Student Management System provides a working full-stack implementation connecting:
+
+React
+   ↓
+Express.js REST API
+   ↓
+MySQL
+
+The core student, department, course, and student-course management functionality has been implemented and tested as documented in the project report.
+
+   License
+
+This project is developed INSA summer camp students as a group project.
+
+<p align="center"> <strong>Student Management System</strong> <br> Built with React, Node.js, Express.js and MySQL </p> ```
+````
