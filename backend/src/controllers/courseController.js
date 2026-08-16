@@ -132,3 +132,12 @@ exports.getCoursesForStudent = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+
+exports.getCoursesByDepartment = async (req, res) => {
+    try {
+        const courses = await courseModel.getCoursesByDepartment(req.params.departmentId);
+        res.json({ success: true, data: courses });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};

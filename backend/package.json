@@ -10,7 +10,7 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "",
+  "description": "Student Management System API with JWT authentication and Admin student/teacher management.",
   "dependencies": {
     "bcrypt": "^6.0.0",
     "body-parser": "^2.3.0",

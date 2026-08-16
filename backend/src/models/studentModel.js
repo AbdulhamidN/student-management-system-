@@ -1,217 +1,215 @@
-/**
- * =====================================================
- * studentModel.js
- * -----------------------------------------------------
- * Purpose:
- * Handle all database operations for students table.
- *
- * Responsibilities:
- * - Insert student (with phone and department_id)
- * - Get active students (joined with departments)
- * - Get student by ID (joined with departments)
- * - Update student (with phone and department_id)
- * - Soft delete student (set is_deleted = TRUE)
- * - Get total active student count
- * - Get students by department
- * - Assign course to student
- * - Get student's courses
- * - Remove course from student
- * =====================================================
- */
+const { pool } = require('../config/db');
+const bcrypt = require('bcrypt');
+const { generateTemporaryPassword } = require('../utils/adminCredentials');
 
-// Import database connection pool
-const { pool } = require("../config/db");
+const normalizeStudent = (student) => ({
+  name: String(student.name || '').trim().replace(/\s+/g, ' '),
+  email: String(student.email || '').trim().toLowerCase(),
+  phone: student.phone ? String(student.phone).trim() : null,
+  department_id: student.department_id ? Number(student.department_id) : null,
+});
 
-/**
- * =====================================================
- * CREATE STUDENT
- * =====================================================
- * Insert new student into database with phone and department_id
- */
-const createStudent = async (student) => {
-    const sql = `
-        INSERT INTO students
-        (name, email, phone, department_id)
-        VALUES (?, ?, ?, ?)
-    `;
+async function getAllStudents() {
+  const [rows] = await pool.execute(`
+    SELECT s.id, s.user_id, s.name, s.email, s.phone, s.department_id,
+           d.name AS department_name,
+           COUNT(sc.course_id) AS course_count
+    FROM students s
+    LEFT JOIN departments d ON d.id = s.department_id
+    LEFT JOIN student_courses sc ON sc.student_id = s.id
+    WHERE s.is_deleted = FALSE
+    GROUP BY s.id
+    ORDER BY s.name ASC
+  `);
+  return rows;
+}
 
-    const values = [
-        student.name,
-        student.email,
-        student.phone,
-        student.department_id
-    ];
+async function getStudentById(id, connection = pool) {
+  const [rows] = await connection.execute(`
+    SELECT s.id, s.user_id, s.name, s.email, s.phone, s.department_id,
+           d.name AS department_name
+    FROM students s
+    LEFT JOIN departments d ON d.id = s.department_id
+    WHERE s.id = ? AND s.is_deleted = FALSE
+    LIMIT 1
+  `, [id]);
+  return rows[0] || null;
+}
 
-    const [result] = await pool.execute(sql, values);
-    return result;
-};
+async function getActiveStudentCount() {
+  const [rows] = await pool.execute('SELECT COUNT(*) AS count FROM students WHERE is_deleted = FALSE');
+  return Number(rows[0].count);
+}
 
-/**
- * =====================================================
- * GET ALL ACTIVE STUDENTS
- * =====================================================
- * Returns only students with is_deleted = FALSE
- * Joins with departments table to get department name
- */
-const getAllStudents = async () => {
-    const [rows] = await pool.execute(`
-        SELECT s.*, d.name AS department_name
-        FROM students s
-        LEFT JOIN departments d ON s.department_id = d.id
-        WHERE s.is_deleted = FALSE
-    `);
-    return rows;
-};
+async function getStudentsByDepartment(departmentId) {
+  const [rows] = await pool.execute(`
+    SELECT s.id, s.user_id, s.name, s.email, s.phone, s.department_id,
+           d.name AS department_name
+    FROM students s
+    LEFT JOIN departments d ON d.id = s.department_id
+    WHERE s.department_id = ? AND s.is_deleted = FALSE
+    ORDER BY s.name ASC
+  `, [departmentId]);
+  return rows;
+}
 
-/**
- * =====================================================
- * GET STUDENT BY ID
- * =====================================================
- * Returns a single active student with department name
- */
-const getStudentById = async (id) => {
-    const [rows] = await pool.execute(`
-        SELECT s.*, d.name AS department_name
-        FROM students s
-        LEFT JOIN departments d ON s.department_id = d.id
-        WHERE s.id = ? AND s.is_deleted = FALSE
-    `, [id]);
-    return rows[0];
-};
+async function createStudent(student, { createLogin = true } = {}) {
+  const data = normalizeStudent(student);
+  const connection = await pool.getConnection();
+  let temporaryPassword = null;
+  try {
+    await connection.beginTransaction();
+    let userId = null;
 
-/**
- * =====================================================
- * UPDATE STUDENT
- * =====================================================
- * Update student details (only if not soft-deleted)
- */
-const updateStudent = async (id, student) => {
-    const sql = `
-        UPDATE students
-        SET name = ?,
-            email = ?,
-            phone = ?,
-            department_id = ?
-        WHERE id = ? AND is_deleted = FALSE
-    `;
-
-    const values = [
-        student.name,
-        student.email,
-        student.phone,
-        student.department_id,
-        id
-    ];
-
-    const [result] = await pool.execute(sql, values);
-    return result;
-};
-
-/**
- * =====================================================
- * SOFT DELETE STUDENT
- * =====================================================
- * Instead of deleting, set is_deleted = TRUE
- */
-const deleteStudent = async (id) => {
-    const [result] = await pool.execute(
-        "UPDATE students SET is_deleted = TRUE WHERE id = ?",
-        [id]
-    );
-    return result;
-};
-
-/**
- * =====================================================
- * GET ACTIVE STUDENT COUNT
- * =====================================================
- * Returns total number of students with is_deleted = FALSE
- */
-const getActiveStudentCount = async () => {
-    const [rows] = await pool.execute(
-        "SELECT COUNT(*) AS count FROM students WHERE is_deleted = FALSE"
-    );
-    return rows[0].count;
-};
-
-/**
- * =====================================================
- * GET STUDENTS BY DEPARTMENT
- * =====================================================
- * Returns active students belonging to a specific department
- */
-const getStudentsByDepartment = async (departmentId) => {
-    const [rows] = await pool.execute(`
-        SELECT s.*, d.name AS department_name
-        FROM students s
-        LEFT JOIN departments d ON s.department_id = d.id
-        WHERE s.department_id = ? AND s.is_deleted = FALSE
-    `, [departmentId]);
-    return rows;
-};
-
-/**
- * =====================================================
- * ASSIGN COURSE TO STUDENT
- * =====================================================
- * Adds a record in the student_courses junction table
- */
-const assignCourseToStudent = async (studentId, courseId) => {
-    try {
-        const [result] = await pool.execute(
-            'INSERT INTO student_courses (student_id, course_id) VALUES (?, ?)',
-            [studentId, courseId]
-        );
-        return result;
-    } catch (error) {
-        if (error.code === 'ER_DUP_ENTRY') {
-            throw new Error('Course already assigned to this student');
-        }
-        throw error;
+    if (createLogin) {
+      temporaryPassword = generateTemporaryPassword();
+      const passwordHash = await bcrypt.hash(temporaryPassword, 10);
+      const [userResult] = await connection.execute(
+        'INSERT INTO users (name, email, password_hash, role, is_active) VALUES (?, ?, ?, \'student\', TRUE)',
+        [data.name, data.email, passwordHash]
+      );
+      userId = userResult.insertId;
     }
-};
 
-/**
- * =====================================================
- * GET ALL COURSES FOR A STUDENT
- * =====================================================
- * Returns all courses enrolled by a specific student
- */
-const getStudentCourses = async (studentId) => {
-    const [rows] = await pool.execute(`
-        SELECT c.*, d.name AS department_name
-        FROM courses c
-        JOIN student_courses sc ON c.id = sc.course_id
-        LEFT JOIN departments d ON c.department_id = d.id
-        WHERE sc.student_id = ?
-    `, [studentId]);
-    return rows;
-};
-
-/**
- * =====================================================
- * REMOVE COURSE FROM STUDENT
- * =====================================================
- * Deletes a record from the student_courses junction table
- */
-const removeCourseFromStudent = async (studentId, courseId) => {
-    const [result] = await pool.execute(
-        'DELETE FROM student_courses WHERE student_id = ? AND course_id = ?',
-        [studentId, courseId]
+    const [result] = await connection.execute(
+      'INSERT INTO students (user_id, name, email, phone, department_id) VALUES (?, ?, ?, ?, ?)',
+      [userId, data.name, data.email, data.phone, data.department_id]
     );
-    return result.affectedRows > 0;
-};
 
-// Export functions
+    await connection.commit();
+    return { ...result, userId, temporaryPassword };
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+}
+
+async function updateStudent(id, student) {
+  const data = normalizeStudent(student);
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    const existing = await getStudentById(id, connection);
+    if (!existing) return { affectedRows: 0 };
+
+    const [result] = await connection.execute(
+      `UPDATE students SET name = ?, email = ?, phone = ?, department_id = ?
+       WHERE id = ? AND is_deleted = FALSE`,
+      [data.name, data.email, data.phone, data.department_id, id]
+    );
+
+    if (existing.user_id) {
+      await connection.execute(
+        'UPDATE users SET name = ?, email = ? WHERE id = ? AND role = \'student\'',
+        [data.name, data.email, existing.user_id]
+      );
+    }
+
+    await connection.commit();
+    return result;
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+}
+
+async function deleteStudent(id) {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    const existing = await getStudentById(id, connection);
+    if (!existing) return { affectedRows: 0 };
+    const [result] = await connection.execute('UPDATE students SET is_deleted = TRUE WHERE id = ?', [id]);
+    if (existing.user_id) {
+      await connection.execute('UPDATE users SET is_active = FALSE WHERE id = ?', [existing.user_id]);
+    }
+    await connection.commit();
+    return result;
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+}
+
+async function getStudentCourses(studentId) {
+  const [rows] = await pool.execute(`
+    SELECT c.id, c.name, c.code, c.department_id, d.name AS department_name
+    FROM student_courses sc
+    JOIN courses c ON c.id = sc.course_id
+    LEFT JOIN departments d ON d.id = c.department_id
+    WHERE sc.student_id = ?
+    ORDER BY c.name ASC
+  `, [studentId]);
+  return rows;
+}
+
+async function setStudentCourses(studentId, courseIds) {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    const [studentRows] = await connection.execute(
+      'SELECT department_id FROM students WHERE id = ? AND is_deleted = FALSE LIMIT 1',
+      [studentId]
+    );
+    if (!studentRows[0]) throw Object.assign(new Error('Student not found'), { statusCode: 404 });
+
+    const ids = [...new Set((courseIds || []).map(Number).filter(Number.isInteger))];
+    if (ids.length) {
+      const placeholders = ids.map(() => '?').join(',');
+      const [courseRows] = await connection.execute(
+        `SELECT id FROM courses WHERE department_id = ? AND id IN (${placeholders})`,
+        [studentRows[0].department_id, ...ids]
+      );
+      if (courseRows.length !== ids.length) {
+        throw Object.assign(new Error('One or more selected courses do not belong to the student department.'), { statusCode: 400 });
+      }
+    }
+
+    await connection.execute('DELETE FROM student_courses WHERE student_id = ?', [studentId]);
+    for (const courseId of ids) {
+      await connection.execute('INSERT INTO student_courses (student_id, course_id) VALUES (?, ?)', [studentId, courseId]);
+    }
+    await connection.commit();
+    return ids;
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+}
+
+async function removeCourseFromStudent(studentId, courseId) {
+  const [result] = await pool.execute(
+    'DELETE FROM student_courses WHERE student_id = ? AND course_id = ?',
+    [studentId, courseId]
+  );
+  return result;
+}
+
+async function validateDepartment(departmentId, connection = pool) {
+  if (!departmentId) return true;
+  const [rows] = await connection.execute('SELECT id FROM departments WHERE id = ? LIMIT 1', [departmentId]);
+  return Boolean(rows[0]);
+}
+
 module.exports = {
-    createStudent,
-    getAllStudents,
-    getStudentById,
-    updateStudent,
-    deleteStudent,
-    getActiveStudentCount,
-    getStudentsByDepartment,
-    assignCourseToStudent,
-    getStudentCourses,
-    removeCourseFromStudent
+  normalizeStudent,
+  getAllStudents,
+  getStudentById,
+  getActiveStudentCount,
+  getStudentsByDepartment,
+  createStudent,
+  updateStudent,
+  deleteStudent,
+  getStudentCourses,
+  setStudentCourses,
+  removeCourseFromStudent,
+  validateDepartment,
 };

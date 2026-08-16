@@ -8,6 +8,7 @@ const stripSensitiveUser = (user) => ({
   name: user.name,
   email: user.email,
   role: user.role,
+  isActive: user.is_active,
 });
 
 async function registerUser(req, res, next) {
@@ -61,7 +62,7 @@ async function loginUser(req, res, next) {
     }
 
     const user = await userModel.findUserByEmail(validation.sanitized.email);
-    if (!user) {
+    if (!user || !user.is_active) {
       return res.status(401).json({
         success: false,
         message: 'Invalid email or password.',

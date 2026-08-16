@@ -11,7 +11,9 @@
  */
 
 const express = require("express");
+const { authenticateToken } = require("../middleware/authMiddleware");
 const router = express.Router();
+router.use(authenticateToken);
 const departmentController = require("../controllers/departmentController");
 
 router.post("/", departmentController.createDepartment);

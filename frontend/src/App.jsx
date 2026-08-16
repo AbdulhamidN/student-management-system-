@@ -11,6 +11,7 @@ import Students from './pages/admin/Students';
 import Courses from './pages/admin/Courses';
 import Departments from './pages/admin/Departments';
 import AdminDashboard from './pages/admin/AdminDashboard';
+import Teachers from './pages/admin/Teachers';
 import TeacherDashboard from './pages/teacher/TeacherDashboard';
 import StudentDashboard from './pages/student/StudentDashboard';
 
@@ -62,6 +63,7 @@ function AppRoutes() {
         <Route path="students" element={<Students />} />
         <Route path="courses" element={<Courses />} />
         <Route path="departments" element={<Departments />} />
+        <Route path="teachers" element={<Teachers />} />
       </Route>
 
       <Route
