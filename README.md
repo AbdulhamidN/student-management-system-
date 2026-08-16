@@ -147,7 +147,65 @@ The application includes:
 - 404 handling
 - Centralized error handling
 
-## 🛠️ Technology Stack
+## � Authentication & Security
+
+### Authentication flow
+
+The project now includes a public entry point and a secure JWT-based authentication flow.
+
+- Public visitors can view the home page and announcements without login.
+- New users can register through the public registration form.
+- Registration requires a valid name, email, strong password, and a supported role.
+- The backend rejects admin self-registration from the public endpoint.
+- Login accepts email and password, validates both inputs, and returns a signed JWT token.
+- JWTs include the authenticated user ID and role and use an expiration policy defined in environment variables.
+
+### Role-based access control
+
+The backend enforces role checks on protected endpoints using middleware:
+
+- `authenticateToken` verifies the bearer token and attaches `req.user`
+- `requireAdmin`, `requireTeacher`, and `requireStudent` enforce role-specific access
+- Protected routes reject missing, expired, invalid, and unauthorized requests with HTTP 401/403 responses
+
+### Password and API security
+
+- Passwords are never stored in plaintext
+- Hashing uses bcrypt
+- Password validation requires minimum 8 characters with uppercase, lowercase, number, and special character
+- Rate limiting is applied to login and registration endpoints
+- Helmet enforces security headers and CSP rules
+- CORS is restricted to allowed frontend origins
+- Input validation and parameterized SQL queries protect against injection and malformed input
+
+### Environment variables
+
+Create a backend `.env` file with values like:
+
+```env
+DB_HOST=localhost
+DB_USER=root
+DB_PASSWORD=your_password
+DB_NAME=student_management
+DB_PORT=3306
+PORT=5000
+JWT_SECRET=your_secure_secret
+JWT_EXPIRES_IN=1h
+FRONTEND_URL=http://localhost:3000
+```
+
+The repository ignores `.env` files and ships a template in `backend/.env.example`.
+
+### Local authentication workflow
+
+1. Start MySQL and import the schema from `database/schema.sql`.
+2. Configure `backend/.env`.
+3. Start the backend with `npm run dev` inside `backend`.
+4. Start the frontend with `npm start` inside `frontend`.
+5. Open the public site, register a user, and log in.
+6. The app redirects to the correct role-based dashboard.
+
+## �🛠️ Technology Stack
 
 | Layer              | Technology     |
 | ------------------ | -------------- |

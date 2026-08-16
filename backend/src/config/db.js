@@ -23,19 +23,19 @@ const mysql = require("mysql2/promise");
 const pool = mysql.createPool({
 
     // Database server address
-    host: process.env.DB_HOST,
+    host: process.env.DB_HOST || "localhost",
 
     // Database port
-    port: process.env.DB_PORT,
+    port: process.env.DB_PORT || 3306,
 
     // MySQL username
-    user: process.env.DB_USER,
+    user: process.env.DB_USER || "root",
 
     // MySQL password
-    password: process.env.DB_PASSWORD,
+    password: process.env.DB_PASSWORD || "",
 
     // Database name
-    database: process.env.DB_NAME,
+    database: process.env.DB_NAME || "student_management",
 
 
     // Allow waiting if all connections are busy

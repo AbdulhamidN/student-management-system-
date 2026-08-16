@@ -19,26 +19,48 @@
 
 // Import Express framework
 const express = require("express");
-
-// Import CORS (Cross-Origin Resource Sharing)
+const helmet = require("helmet");
 const cors = require("cors");
 
 // Create Express application
 const app = express();
 
-/**
- * =====================================================
- * 1. BUILT-IN MIDDLEWARE
- * =====================================================
- */
+const allowedOrigins = [
+    process.env.FRONTEND_URL,
+    "http://localhost:3000",
+    "http://127.0.0.1:3000"
+].filter(Boolean);
 
-// Enable CORS for all routes (MUST come before routes)
-app.use(cors());
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'"],
+            styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+            imgSrc: ["'self'", "data:", "https:"],
+            fontSrc: ["'self'", "https://fonts.gstatic.com"],
+            connectSrc: ["'self'", "http://localhost:5000", "http://localhost:3000"],
+            objectSrc: ["'none'"],
+            upgradeInsecureRequests: []
+        }
+    },
+    crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
 
-// Allows Express to read JSON data
+app.use(cors({
+    origin: function (origin, callback) {
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+            return;
+        }
+        callback(new Error("Not allowed by CORS"));
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"]
+}));
+
 app.use(express.json());
-
-// Allows receiving form data
 app.use(express.urlencoded({ extended: true }));
 
 /**
@@ -57,7 +79,13 @@ app.use(logger);
 const studentRoutes = require("./routes/studentRoutes");
 const departmentRoutes = require("./routes/departmentRoutes");
 const courseRoutes = require("./routes/courseRoutes");
+const authRoutes = require("./routes/authRoutes");
+const announcementRoutes = require("./routes/announcementRoutes");
+const protectedRoutes = require("./routes/protectedRoutes");
 
+app.use("/api/auth", authRoutes);
+app.use("/api/announcements", announcementRoutes);
+app.use("/api/protected", protectedRoutes);
 app.use("/api/students", studentRoutes);
 app.use("/api/departments", departmentRoutes);
 app.use("/api/courses", courseRoutes);
