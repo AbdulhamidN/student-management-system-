@@ -1,4 +1,4 @@
-﻿import StudentList from '../components/Students/StudentList';
+import StudentList from '../../components/Students/StudentList';
 
 const Students = () => {
     // Hardcode the count to 4 for the screenshot, or later we'll make it dynamic
@@ -10,7 +10,7 @@ const Students = () => {
             <div className="flex justify-between items-start mb-6 border-b pb-4">
                 <div>
                     <h1 className="text-2xl font-bold flex items-center gap-2">
-                        🎓 Student Management
+                        ?? Student Management
                     </h1>
                     <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Manage students, departments, and courses</p>
                 </div>
@@ -31,4 +31,5 @@ const Students = () => {
 };
 
 export default Students;
+
 

@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import AdminLayout from './layouts/AdminLayout';
-import Dashboard from './pages/Dashboard';
-import Students from './pages/Students';
-import Courses from './pages/Courses';
-import Departments from './pages/Departments';
+import Dashboard from './pages/admin/Dashboard';
+import Students from "./pages/admin/Students";
+import Courses from './pages/admin/Courses';
+import Departments from './pages/admin/Departments';
 
 function App() {
   const [darkMode, setDarkMode] = useState(false);
@@ -37,3 +37,4 @@ function App() {
   );
 }
 export default App;
+
