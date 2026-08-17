@@ -13,9 +13,9 @@
  */
 
 const express = require("express");
-const { authenticateToken } = require("../middleware/authMiddleware");
+const { authenticateToken, requireAdmin } = require("../middleware/authMiddleware");
 const router = express.Router();
-router.use(authenticateToken);
+router.use(authenticateToken, requireAdmin);
 const courseController = require("../controllers/courseController");
 
 // IMPORTANT: specific routes before /:id so "assign" and "student"

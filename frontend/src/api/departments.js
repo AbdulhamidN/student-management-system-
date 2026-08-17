@@ -11,3 +11,16 @@ export const createDepartment = async (name) => {
     });
     return response;
 };
+export const updateDepartment = async (id, name) => {
+    const response = await apiRequest(`/departments/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ name }),
+    });
+    return response;
+};
+export const deleteDepartment = async (id) => {
+    const response = await apiRequest(`/departments/${id}`, {
+        method: 'DELETE',
+    });
+    return response;
+};
