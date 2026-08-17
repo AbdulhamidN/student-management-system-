@@ -1,215 +1,188 @@
 const { pool } = require('../config/db');
-const bcrypt = require('bcrypt');
-const { generateTemporaryPassword } = require('../utils/adminCredentials');
 
-const normalizeStudent = (student) => ({
-  name: String(student.name || '').trim().replace(/\s+/g, ' '),
-  email: String(student.email || '').trim().toLowerCase(),
-  phone: student.phone ? String(student.phone).trim() : null,
-  department_id: student.department_id ? Number(student.department_id) : null,
-});
-
-async function getAllStudents() {
-  const [rows] = await pool.execute(`
-    SELECT s.id, s.user_id, s.name, s.email, s.phone, s.department_id,
-           d.name AS department_name,
-           COUNT(sc.course_id) AS course_count
-    FROM students s
-    LEFT JOIN departments d ON d.id = s.department_id
-    LEFT JOIN student_courses sc ON sc.student_id = s.id
-    WHERE s.is_deleted = FALSE
-    GROUP BY s.id
-    ORDER BY s.name ASC
-  `);
-  return rows;
+function calculateLetterGrade(totalMark) {
+  const score = Number(totalMark) || 0;
+  if (score >= 90) return { grade: 'A', description: 'Excellent' };
+  if (score >= 80) return { grade: 'B', description: 'Very Good' };
+  if (score >= 70) return { grade: 'C', description: 'Good' };
+  if (score >= 60) return { grade: 'D', description: 'Satisfactory' };
+  return { grade: 'F', description: 'Needs Improvement' };
 }
 
-async function getStudentById(id, connection = pool) {
-  const [rows] = await connection.execute(`
-    SELECT s.id, s.user_id, s.name, s.email, s.phone, s.department_id,
-           d.name AS department_name
+function normalizeStudent(student = {}) {
+  return {
+    teacher_id: student.teacher_id ? Number(student.teacher_id) : null,
+    name: String(student.name || '').trim().replace(/\s+/g, ' '),
+    grade: String(student.grade || 'Grade 10').trim(),
+    parent_name: student.parent_name ? String(student.parent_name).trim() : null,
+    parent_phone: student.parent_phone ? String(student.parent_phone).trim() : null,
+    email: student.email ? String(student.email).trim().toLowerCase() : null,
+    address: student.address ? String(student.address).trim() : null,
+    date_of_birth: student.date_of_birth || null,
+    enrollment_date: student.enrollment_date || null,
+    status: ['active', 'inactive', 'graduated'].includes(student.status) ? student.status : 'active',
+    notes: student.notes ? String(student.notes).trim() : null,
+    mid_mark: Math.max(0, Math.min(20, Number(student.mid_mark) || 0)),
+    final_mark: Math.max(0, Math.min(50, Number(student.final_mark) || 0)),
+    assessment_mark: Math.max(0, Math.min(30, Number(student.assessment_mark) || 0)),
+  };
+}
+
+async function getAllStudents(options = {}) {
+  let query = `
+    SELECT s.id, s.teacher_id, s.name, s.grade, s.parent_name, s.parent_phone,
+           s.email, s.address, s.date_of_birth, s.enrollment_date, s.status, s.notes,
+           s.mid_mark, s.final_mark, s.assessment_mark, s.total_mark, s.created_at,
+           t.name AS teacher_name, t.department AS teacher_department
     FROM students s
-    LEFT JOIN departments d ON d.id = s.department_id
-    WHERE s.id = ? AND s.is_deleted = FALSE
+    LEFT JOIN teachers t ON t.id = s.teacher_id
+  `;
+  const params = [];
+
+  if (options.teacher_id) {
+    query += ' WHERE s.teacher_id = ?';
+    params.push(options.teacher_id);
+  }
+
+  query += ' ORDER BY s.total_mark DESC, s.name ASC';
+
+  const [rows] = await pool.execute(query, params);
+
+  return rows.map((row, index) => {
+    const letter = calculateLetterGrade(row.total_mark);
+    return {
+      ...row,
+      rank: index + 1,
+      letter_grade: letter.grade,
+      grade_description: letter.description,
+    };
+  });
+}
+
+async function getStudentById(id) {
+  const [rows] = await pool.execute(`
+    SELECT s.id, s.teacher_id, s.name, s.grade, s.parent_name, s.parent_phone,
+           s.email, s.address, s.date_of_birth, s.enrollment_date, s.status, s.notes,
+           s.mid_mark, s.final_mark, s.assessment_mark, s.total_mark, s.created_at,
+           t.name AS teacher_name, t.department AS teacher_department
+    FROM students s
+    LEFT JOIN teachers t ON t.id = s.teacher_id
+    WHERE s.id = ?
     LIMIT 1
   `, [id]);
-  return rows[0] || null;
+
+  if (!rows[0]) return null;
+
+  const letter = calculateLetterGrade(rows[0].total_mark);
+  return {
+    ...rows[0],
+    letter_grade: letter.grade,
+    grade_description: letter.description,
+  };
 }
 
-async function getActiveStudentCount() {
-  const [rows] = await pool.execute('SELECT COUNT(*) AS count FROM students WHERE is_deleted = FALSE');
-  return Number(rows[0].count);
-}
+async function updateStudentMarks(id, { mid_mark, final_mark, assessment_mark }) {
+  const mid = Number(mid_mark);
+  const final = Number(final_mark);
+  const assessment = Number(assessment_mark);
 
-async function getStudentsByDepartment(departmentId) {
-  const [rows] = await pool.execute(`
-    SELECT s.id, s.user_id, s.name, s.email, s.phone, s.department_id,
-           d.name AS department_name
-    FROM students s
-    LEFT JOIN departments d ON d.id = s.department_id
-    WHERE s.department_id = ? AND s.is_deleted = FALSE
-    ORDER BY s.name ASC
-  `, [departmentId]);
-  return rows;
-}
-
-async function createStudent(student, { createLogin = true } = {}) {
-  const data = normalizeStudent(student);
-  const connection = await pool.getConnection();
-  let temporaryPassword = null;
-  try {
-    await connection.beginTransaction();
-    let userId = null;
-
-    if (createLogin) {
-      temporaryPassword = generateTemporaryPassword();
-      const passwordHash = await bcrypt.hash(temporaryPassword, 10);
-      const [userResult] = await connection.execute(
-        'INSERT INTO users (name, email, password_hash, role, is_active) VALUES (?, ?, ?, \'student\', TRUE)',
-        [data.name, data.email, passwordHash]
-      );
-      userId = userResult.insertId;
-    }
-
-    const [result] = await connection.execute(
-      'INSERT INTO students (user_id, name, email, phone, department_id) VALUES (?, ?, ?, ?, ?)',
-      [userId, data.name, data.email, data.phone, data.department_id]
-    );
-
-    await connection.commit();
-    return { ...result, userId, temporaryPassword };
-  } catch (error) {
-    await connection.rollback();
-    throw error;
-  } finally {
-    connection.release();
+  if (isNaN(mid) || mid < 0 || mid > 20) {
+    throw Object.assign(new Error('Midterm exam mark must be between 0 and 20 points.'), { statusCode: 400 });
   }
-}
-
-async function updateStudent(id, student) {
-  const data = normalizeStudent(student);
-  const connection = await pool.getConnection();
-  try {
-    await connection.beginTransaction();
-    const existing = await getStudentById(id, connection);
-    if (!existing) return { affectedRows: 0 };
-
-    const [result] = await connection.execute(
-      `UPDATE students SET name = ?, email = ?, phone = ?, department_id = ?
-       WHERE id = ? AND is_deleted = FALSE`,
-      [data.name, data.email, data.phone, data.department_id, id]
-    );
-
-    if (existing.user_id) {
-      await connection.execute(
-        'UPDATE users SET name = ?, email = ? WHERE id = ? AND role = \'student\'',
-        [data.name, data.email, existing.user_id]
-      );
-    }
-
-    await connection.commit();
-    return result;
-  } catch (error) {
-    await connection.rollback();
-    throw error;
-  } finally {
-    connection.release();
+  if (isNaN(final) || final < 0 || final > 50) {
+    throw Object.assign(new Error('Final exam mark must be between 0 and 50 points.'), { statusCode: 400 });
   }
-}
-
-async function deleteStudent(id) {
-  const connection = await pool.getConnection();
-  try {
-    await connection.beginTransaction();
-    const existing = await getStudentById(id, connection);
-    if (!existing) return { affectedRows: 0 };
-    const [result] = await connection.execute('UPDATE students SET is_deleted = TRUE WHERE id = ?', [id]);
-    if (existing.user_id) {
-      await connection.execute('UPDATE users SET is_active = FALSE WHERE id = ?', [existing.user_id]);
-    }
-    await connection.commit();
-    return result;
-  } catch (error) {
-    await connection.rollback();
-    throw error;
-  } finally {
-    connection.release();
+  if (isNaN(assessment) || assessment < 0 || assessment > 30) {
+    throw Object.assign(new Error('Assessment mark must be between 0 and 30 points.'), { statusCode: 400 });
   }
-}
 
-async function getStudentCourses(studentId) {
-  const [rows] = await pool.execute(`
-    SELECT c.id, c.name, c.code, c.department_id, d.name AS department_name
-    FROM student_courses sc
-    JOIN courses c ON c.id = sc.course_id
-    LEFT JOIN departments d ON d.id = c.department_id
-    WHERE sc.student_id = ?
-    ORDER BY c.name ASC
-  `, [studentId]);
-  return rows;
-}
+  const total = mid + final + assessment;
 
-async function setStudentCourses(studentId, courseIds) {
-  const connection = await pool.getConnection();
-  try {
-    await connection.beginTransaction();
-    const [studentRows] = await connection.execute(
-      'SELECT department_id FROM students WHERE id = ? AND is_deleted = FALSE LIMIT 1',
-      [studentId]
-    );
-    if (!studentRows[0]) throw Object.assign(new Error('Student not found'), { statusCode: 404 });
+  const [result] = await pool.execute(`
+    UPDATE students
+    SET mid_mark = ?, final_mark = ?, assessment_mark = ?, total_mark = ?
+    WHERE id = ?
+  `, [mid, final, assessment, total, id]);
 
-    const ids = [...new Set((courseIds || []).map(Number).filter(Number.isInteger))];
-    if (ids.length) {
-      const placeholders = ids.map(() => '?').join(',');
-      const [courseRows] = await connection.execute(
-        `SELECT id FROM courses WHERE department_id = ? AND id IN (${placeholders})`,
-        [studentRows[0].department_id, ...ids]
-      );
-      if (courseRows.length !== ids.length) {
-        throw Object.assign(new Error('One or more selected courses do not belong to the student department.'), { statusCode: 400 });
-      }
-    }
-
-    await connection.execute('DELETE FROM student_courses WHERE student_id = ?', [studentId]);
-    for (const courseId of ids) {
-      await connection.execute('INSERT INTO student_courses (student_id, course_id) VALUES (?, ?)', [studentId, courseId]);
-    }
-    await connection.commit();
-    return ids;
-  } catch (error) {
-    await connection.rollback();
-    throw error;
-  } finally {
-    connection.release();
+  if (result.affectedRows === 0) {
+    throw Object.assign(new Error('Student not found.'), { statusCode: 404 });
   }
+
+  const updatedStudent = await getStudentById(id);
+  return updatedStudent;
 }
 
-async function removeCourseFromStudent(studentId, courseId) {
-  const [result] = await pool.execute(
-    'DELETE FROM student_courses WHERE student_id = ? AND course_id = ?',
-    [studentId, courseId]
-  );
+async function createStudent(studentData) {
+  const data = normalizeStudent(studentData);
+  const total_mark = data.mid_mark + data.final_mark + data.assessment_mark;
+
+  const [result] = await pool.execute(`
+    INSERT INTO students (teacher_id, name, grade, parent_name, parent_phone, email, address, date_of_birth, enrollment_date, status, notes, mid_mark, final_mark, assessment_mark, total_mark)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `, [
+    data.teacher_id,
+    data.name,
+    data.grade,
+    data.parent_name,
+    data.parent_phone,
+    data.email,
+    data.address,
+    data.date_of_birth,
+    data.enrollment_date,
+    data.status,
+    data.notes,
+    data.mid_mark,
+    data.final_mark,
+    data.assessment_mark,
+    total_mark,
+  ]);
+
+  return { id: result.insertId, ...data, total_mark };
+}
+
+async function updateStudent(id, studentData) {
+  const data = normalizeStudent(studentData);
+  const total_mark = data.mid_mark + data.final_mark + data.assessment_mark;
+
+  const [result] = await pool.execute(`
+    UPDATE students
+    SET teacher_id = ?, name = ?, grade = ?, parent_name = ?, parent_phone = ?,
+        email = ?, address = ?, date_of_birth = ?, status = ?, notes = ?,
+        mid_mark = ?, final_mark = ?, assessment_mark = ?, total_mark = ?
+    WHERE id = ?
+  `, [
+    data.teacher_id,
+    data.name,
+    data.grade,
+    data.parent_name,
+    data.parent_phone,
+    data.email,
+    data.address,
+    data.date_of_birth,
+    data.status,
+    data.notes,
+    data.mid_mark,
+    data.final_mark,
+    data.assessment_mark,
+    total_mark,
+    id,
+  ]);
+
   return result;
 }
 
-async function validateDepartment(departmentId, connection = pool) {
-  if (!departmentId) return true;
-  const [rows] = await connection.execute('SELECT id FROM departments WHERE id = ? LIMIT 1', [departmentId]);
-  return Boolean(rows[0]);
+async function deleteStudent(id) {
+  const [result] = await pool.execute('DELETE FROM students WHERE id = ?', [id]);
+  return result;
 }
 
 module.exports = {
+  calculateLetterGrade,
   normalizeStudent,
   getAllStudents,
   getStudentById,
-  getActiveStudentCount,
-  getStudentsByDepartment,
+  updateStudentMarks,
   createStudent,
   updateStudent,
   deleteStudent,
-  getStudentCourses,
-  setStudentCourses,
-  removeCourseFromStudent,
-  validateDepartment,
 };

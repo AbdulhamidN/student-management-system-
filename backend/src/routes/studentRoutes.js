@@ -1,22 +1,20 @@
 const express = require('express');
 const studentController = require('../controllers/studentController');
-const upload = require('../middleware/uploadMiddleware');
-const { authenticateToken, requireAdmin } = require('../middleware/authMiddleware');
+const { authenticateToken, requireAdmin, requireTeacherOrAdmin } = require('../middleware/authMiddleware');
 
 const router = express.Router();
-router.use(authenticateToken, requireAdmin);
 
-router.get('/count', studentController.getStudentCount);
-router.get('/department/:deptId', studentController.getStudentsByDepartment);
-router.post('/import', upload.single('file'), studentController.importStudents);
-router.get('/', studentController.getAllStudents);
-router.post('/', studentController.createStudent);
-router.get('/:id/courses', studentController.getStudentCourses);
-router.put('/:id/courses', studentController.setCourses);
-router.post('/:id/courses', studentController.assignCourse);
-router.delete('/:id/courses/:courseId', studentController.removeCourseFromStudent);
-router.get('/:id', studentController.getStudentById);
-router.put('/:id', studentController.updateStudent);
-router.delete('/:id', studentController.deleteStudent);
+// Read student list & student details (Teachers and Admins)
+router.get('/', authenticateToken, studentController.getAllStudents);
+router.get('/:id', authenticateToken, studentController.getStudentById);
+
+// Gradebook mark entry & updates (Teachers and Admins)
+router.patch('/:id/marks', authenticateToken, requireTeacherOrAdmin, studentController.updateStudentMarks);
+router.put('/:id/marks', authenticateToken, requireTeacherOrAdmin, studentController.updateStudentMarks);
+
+// Student registration CRUD (Admin ONLY - Teachers get 403 Forbidden)
+router.post('/', authenticateToken, requireAdmin, studentController.createStudent);
+router.put('/:id', authenticateToken, requireAdmin, studentController.updateStudent);
+router.delete('/:id', authenticateToken, requireAdmin, studentController.deleteStudent);
 
 module.exports = router;

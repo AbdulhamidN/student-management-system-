@@ -35,7 +35,7 @@ const pool = mysql.createPool({
     password: process.env.DB_PASSWORD || "",
 
     // Database name
-    database: process.env.DB_NAME || "student_management",
+    database: process.env.DB_NAME || "school_management",
 
 
     // Allow waiting if all connections are busy

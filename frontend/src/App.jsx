@@ -7,12 +7,16 @@ import AnnouncementsPage from './pages/public/AnnouncementsPage';
 import LoginPage from './pages/public/LoginPage';
 import RegisterPage from './pages/public/RegisterPage';
 import AdminLayout from './layouts/AdminLayout';
+import TeacherLayout from './layouts/TeacherLayout';
 import Students from './pages/admin/Students';
 import Courses from './pages/admin/Courses';
 import Departments from './pages/admin/Departments';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import Teachers from './pages/admin/Teachers';
 import TeacherDashboard from './pages/teacher/TeacherDashboard';
+import TeacherGradebook from './pages/teacher/TeacherGradebook';
+import TeacherStudentRoster from './pages/teacher/TeacherStudentRoster';
+import TeacherProfile from './pages/teacher/TeacherProfile';
 import StudentDashboard from './pages/student/StudentDashboard';
 
 function ProtectedRoute({ allowedRoles, children }) {
@@ -70,11 +74,15 @@ function AppRoutes() {
         path="/teacher"
         element={
           <ProtectedRoute allowedRoles={['teacher']}>
-            <TeacherDashboard />
+            <TeacherLayout darkMode={darkMode} toggleDarkMode={toggleDarkMode} />
           </ProtectedRoute>
         }
       >
         <Route index element={<TeacherDashboard />} />
+        <Route path="dashboard" element={<TeacherDashboard />} />
+        <Route path="gradebook" element={<TeacherGradebook />} />
+        <Route path="roster" element={<TeacherStudentRoster />} />
+        <Route path="profile" element={<TeacherProfile />} />
       </Route>
 
       <Route
@@ -104,4 +112,3 @@ function App() {
 }
 
 export default App;
-

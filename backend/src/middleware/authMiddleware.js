@@ -17,7 +17,7 @@ async function authenticateToken(req, res, next) {
     const decoded = verifyToken(token);
     const user = await userModel.findUserById(decoded.id);
 
-    if (!user || !user.is_active) {
+    if (!user || (user.is_active !== undefined && !user.is_active)) {
       return res.status(401).json({
         success: false,
         message: 'User session is no longer valid.',
@@ -74,6 +74,24 @@ function requireRole(role) {
   };
 }
 
+function requireTeacherOrAdmin(req, res, next) {
+  if (!req.user) {
+    return res.status(401).json({
+      success: false,
+      message: 'Authentication required.',
+    });
+  }
+
+  if (req.user.role !== 'teacher' && req.user.role !== 'admin') {
+    return res.status(403).json({
+      success: false,
+      message: 'Access denied: insufficient privileges.',
+    });
+  }
+
+  return next();
+}
+
 const requireAdmin = requireRole('admin');
 const requireTeacher = requireRole('teacher');
 const requireStudent = requireRole('student');
@@ -83,4 +101,5 @@ module.exports = {
   requireAdmin,
   requireTeacher,
   requireStudent,
+  requireTeacherOrAdmin,
 };
