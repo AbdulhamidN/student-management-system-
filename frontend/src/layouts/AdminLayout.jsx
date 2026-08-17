@@ -1,4 +1,4 @@
-﻿import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const AdminLayout = ({ darkMode, toggleDarkMode }) => {
@@ -17,6 +17,7 @@ const AdminLayout = ({ darkMode, toggleDarkMode }) => {
         <nav className="space-y-2 flex-1">
           <NavLink to="/admin/dashboard" className={({ isActive }) => `block py-2 px-4 rounded transition-colors ${isActive ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'}`}>Dashboard</NavLink>
           <NavLink to="/admin/students" className={({ isActive }) => `block py-2 px-4 rounded transition-colors ${isActive ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'}`}>Students</NavLink>
+          <NavLink to="/admin/teachers" className={({ isActive }) => `block py-2 px-4 rounded transition-colors ${isActive ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'}`}>Teachers</NavLink>
           <NavLink to="/admin/courses" className={({ isActive }) => `block py-2 px-4 rounded transition-colors ${isActive ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'}`}>Courses</NavLink>
           <NavLink to="/admin/departments" className={({ isActive }) => `block py-2 px-4 rounded transition-colors ${isActive ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'}`}>Departments</NavLink>
         </nav>

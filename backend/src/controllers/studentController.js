@@ -1,332 +1,182 @@
-/**
- * =====================================================
- * studentController.js
- * -----------------------------------------------------
- * Purpose:
- * Handle HTTP requests and responses for students.
- *
- * Responsibilities:
- * - Create student (with validation)
- * - Get all active students
- * - Get student by ID
- * - Update student (with validation)
- * - Soft delete student
- * - Get total active student count
- * - Get students by department
- * - Assign course to student
- * - Get student's courses
- * - Remove course from student
- * =====================================================
- */
+const studentModel = require('../models/studentModel');
+const { parseSpreadsheet, rowsToObjects } = require('../utils/spreadsheetParser');
+const { pool } = require('../config/db');
 
-const studentModel = require("../models/studentModel");
+function sanitizeStudentInput(body = {}) {
+  return {
+    name: String(body.name || '').trim().replace(/\s+/g, ' '),
+    email: String(body.email || '').trim().toLowerCase(),
+    phone: body.phone ? String(body.phone).trim() : null,
+    department_id: body.department_id ? Number(body.department_id) : null,
+  };
+}
 
-/**
- * CREATE STUDENT
- * POST /api/students
- */
-exports.createStudent = async (req, res) => {
-    try {
-        const { name, email, phone, department_id } = req.body;
+function validateStudent(data) {
+  if (!data.name || data.name.length < 2 || data.name.length > 100) return 'Name must be between 2 and 100 characters.';
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) return 'A valid email address is required.';
+  if (data.phone && data.phone.length > 20) return 'Phone number must be 20 characters or fewer.';
+  if (data.department_id !== null && (!Number.isInteger(data.department_id) || data.department_id < 1)) return 'Department is invalid.';
+  return null;
+}
 
-        // Validation: Return 400 if name or email is missing
-        if (!name || !email) {
-            return res.status(400).json({
-                success: false,
-                message: "Name and email are required fields"
-            });
-        }
+exports.createStudent = async (req, res, next) => {
+  try {
+    const data = sanitizeStudentInput(req.body);
+    const validationError = validateStudent(data);
+    if (validationError) return res.status(400).json({ success: false, message: validationError });
 
-        const result = await studentModel.createStudent({
-            name,
-            email,
-            phone,
-            department_id
-        });
-
-        res.status(201).json({
-            success: true,
-            message: "Student created successfully",
-            id: result.insertId
-        });
-    } catch (error) {
-        // Handle duplicate email error (MySQL error code 1062)
-        if (error.code === 'ER_DUP_ENTRY') {
-            return res.status(409).json({
-                success: false,
-                message: "Email already exists"
-            });
-        }
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
+    if (!(await studentModel.validateDepartment(data.department_id))) {
+      return res.status(400).json({ success: false, message: 'Selected department does not exist.' });
     }
+
+    const result = await studentModel.createStudent(data);
+    return res.status(201).json({
+      success: true,
+      message: 'Student created successfully.',
+      id: result.insertId,
+      temporaryPassword: result.temporaryPassword,
+    });
+  } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY') return res.status(409).json({ success: false, message: 'A student or user with this email already exists.' });
+    return next(error);
+  }
 };
 
-/**
- * GET ALL ACTIVE STUDENTS
- * GET /api/students
- */
-exports.getAllStudents = async (req, res) => {
-    try {
-        const students = await studentModel.getAllStudents();
-        res.json({
-            success: true,
-            data: students
-        });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
-    }
+exports.getAllStudents = async (req, res, next) => {
+  try { return res.json({ success: true, data: await studentModel.getAllStudents() }); }
+  catch (error) { return next(error); }
 };
 
-/**
- * GET STUDENT BY ID
- * GET /api/students/:id
- */
-exports.getStudentById = async (req, res) => {
-    try {
-        const student = await studentModel.getStudentById(req.params.id);
-
-        if (!student) {
-            return res.status(404).json({
-                success: false,
-                message: "Student not found"
-            });
-        }
-
-        res.json({
-            success: true,
-            data: student
-        });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
-    }
+exports.getStudentById = async (req, res, next) => {
+  try {
+    const student = await studentModel.getStudentById(req.params.id);
+    if (!student) return res.status(404).json({ success: false, message: 'Student not found.' });
+    return res.json({ success: true, data: student });
+  } catch (error) { return next(error); }
 };
 
-/**
- * UPDATE STUDENT
- * PUT /api/students/:id
- */
-exports.updateStudent = async (req, res) => {
-    try {
-        const { name, email, phone, department_id } = req.body;
-
-        // Validation: Return 400 if name or email is missing
-        if (!name || !email) {
-            return res.status(400).json({
-                success: false,
-                message: "Name and email are required fields"
-            });
-        }
-
-        const result = await studentModel.updateStudent(req.params.id, {
-            name,
-            email,
-            phone,
-            department_id
-        });
-
-        if (result.affectedRows === 0) {
-            return res.status(404).json({
-                success: false,
-                message: "Student not found or already deleted"
-            });
-        }
-
-        res.json({
-            success: true,
-            message: "Student updated successfully"
-        });
-    } catch (error) {
-        if (error.code === 'ER_DUP_ENTRY') {
-            return res.status(409).json({
-                success: false,
-                message: "Email already exists"
-            });
-        }
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
+exports.updateStudent = async (req, res, next) => {
+  try {
+    const data = sanitizeStudentInput(req.body);
+    const validationError = validateStudent(data);
+    if (validationError) return res.status(400).json({ success: false, message: validationError });
+    if (!(await studentModel.validateDepartment(data.department_id))) {
+      return res.status(400).json({ success: false, message: 'Selected department does not exist.' });
     }
+    const result = await studentModel.updateStudent(req.params.id, data);
+    if (!result.affectedRows) return res.status(404).json({ success: false, message: 'Student not found.' });
+    return res.json({ success: true, message: 'Student updated successfully.' });
+  } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY') return res.status(409).json({ success: false, message: 'A student or user with this email already exists.' });
+    return next(error);
+  }
 };
 
-/**
- * SOFT DELETE STUDENT
- * DELETE /api/students/:id
- */
-exports.deleteStudent = async (req, res) => {
-    try {
-        const result = await studentModel.deleteStudent(req.params.id);
-
-        if (result.affectedRows === 0) {
-            return res.status(404).json({
-                success: false,
-                message: "Student not found"
-            });
-        }
-
-        res.json({
-            success: true,
-            message: "Student soft-deleted successfully"
-        });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
-    }
+exports.deleteStudent = async (req, res, next) => {
+  try {
+    const result = await studentModel.deleteStudent(req.params.id);
+    if (!result.affectedRows) return res.status(404).json({ success: false, message: 'Student not found.' });
+    return res.json({ success: true, message: 'Student deactivated successfully.' });
+  } catch (error) { return next(error); }
 };
 
-/**
- * GET TOTAL ACTIVE STUDENTS COUNT
- * GET /api/students/count
- */
-exports.getStudentCount = async (req, res) => {
-    try {
-        const count = await studentModel.getActiveStudentCount();
-        res.json({
-            success: true,
-            count: count
-        });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
-    }
+exports.getStudentCount = async (req, res, next) => {
+  try { return res.json({ success: true, count: await studentModel.getActiveStudentCount() }); }
+  catch (error) { return next(error); }
 };
 
-/**
- * GET STUDENTS BY DEPARTMENT
- * GET /api/students/department/:deptId
- */
-exports.getStudentsByDepartment = async (req, res) => {
-    try {
-        const deptId = req.params.deptId;
-        const students = await studentModel.getStudentsByDepartment(deptId);
-        res.json({
-            success: true,
-            data: students
-        });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
-    }
+exports.getStudentsByDepartment = async (req, res, next) => {
+  try { return res.json({ success: true, data: await studentModel.getStudentsByDepartment(req.params.deptId) }); }
+  catch (error) { return next(error); }
 };
 
-/**
- * ASSIGN COURSE TO STUDENT
- * POST /api/students/:id/courses
- */
-exports.assignCourse = async (req, res) => {
-    try {
-        const studentId = req.params.id;
-        const { courseId } = req.body;
-
-        // Validation
-        if (!courseId) {
-            return res.status(400).json({
-                success: false,
-                message: "Course ID is required"
-            });
-        }
-
-        // Check if student exists and is not deleted
-        const student = await studentModel.getStudentById(studentId);
-        if (!student) {
-            return res.status(404).json({
-                success: false,
-                message: "Student not found"
-            });
-        }
-
-        const result = await studentModel.assignCourseToStudent(studentId, courseId);
-
-        res.status(201).json({
-            success: true,
-            message: "Course assigned to student successfully"
-        });
-    } catch (error) {
-        if (error.message === "Course already assigned to this student") {
-            return res.status(409).json({
-                success: false,
-                message: error.message
-            });
-        }
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
-    }
+exports.getStudentCourses = async (req, res, next) => {
+  try {
+    const student = await studentModel.getStudentById(req.params.id);
+    if (!student) return res.status(404).json({ success: false, message: 'Student not found.' });
+    return res.json({ success: true, data: await studentModel.getStudentCourses(req.params.id) });
+  } catch (error) { return next(error); }
 };
 
-/**
- * GET ALL COURSES FOR A STUDENT
- * GET /api/students/:id/courses
- */
-exports.getStudentCourses = async (req, res) => {
-    try {
-        const studentId = req.params.id;
-
-        // Check if student exists
-        const student = await studentModel.getStudentById(studentId);
-        if (!student) {
-            return res.status(404).json({
-                success: false,
-                message: "Student not found"
-            });
-        }
-
-        const courses = await studentModel.getStudentCourses(studentId);
-
-        res.json({
-            success: true,
-            data: courses
-        });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
-    }
+exports.setCourses = async (req, res, next) => {
+  try {
+    if (!Array.isArray(req.body.courseIds)) return res.status(400).json({ success: false, message: 'courseIds must be an array.' });
+    await studentModel.setStudentCourses(req.params.id, req.body.courseIds);
+    return res.json({ success: true, message: 'Student courses updated successfully.' });
+  } catch (error) {
+    return res.status(error.statusCode || 500).json({ success: false, message: error.message || 'Unable to update student courses.' });
+  }
 };
 
-/**
- * REMOVE COURSE FROM STUDENT
- * DELETE /api/students/:id/courses/:courseId
- */
-exports.removeCourseFromStudent = async (req, res) => {
-    try {
-        const studentId = req.params.id;
-        const courseId = req.params.courseId;
+exports.assignCourse = async (req, res, next) => {
+  try {
+    const current = await studentModel.getStudentCourses(req.params.id);
+    const courseId = Number(req.body.courseId);
+    if (!Number.isInteger(courseId)) return res.status(400).json({ success: false, message: 'A valid courseId is required.' });
+    if (!current.some((course) => course.id === courseId)) current.push({ id: courseId });
+    await studentModel.setStudentCourses(req.params.id, current.map((course) => course.id));
+    return res.status(201).json({ success: true, message: 'Course assigned successfully.' });
+  } catch (error) {
+    return res.status(error.statusCode || 500).json({ success: false, message: error.message });
+  }
+};
 
-        const result = await studentModel.removeCourseFromStudent(studentId, courseId);
+exports.removeCourseFromStudent = async (req, res, next) => {
+  try {
+    const result = await studentModel.removeCourseFromStudent(req.params.id, req.params.courseId);
+    if (!result.affectedRows) return res.status(404).json({ success: false, message: 'Course assignment not found.' });
+    return res.json({ success: true, message: 'Course removed from student.' });
+  } catch (error) { return next(error); }
+};
 
-        if (!result) {
-            return res.status(404).json({
-                success: false,
-                message: "Student or course not found"
-            });
-        }
-
-        res.json({
-            success: true,
-            message: "Course removed from student successfully"
-        });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
+exports.importStudents = async (req, res, next) => {
+  try {
+    const extension = req.file.originalname.toLowerCase().slice(req.file.originalname.lastIndexOf('.'));
+    if (!['.xlsx', '.csv'].includes(extension)) {
+      return res.status(400).json({ success: false, message: 'Only .xlsx and .csv files are supported.' });
     }
+
+    const rows = rowsToObjects(parseSpreadsheet(req.file.buffer, req.file.originalname));
+    if (!rows.length) return res.status(400).json({ success: false, message: 'The spreadsheet contains no student rows.' });
+    if (rows.length > 5000) return res.status(400).json({ success: false, message: 'A single upload can contain at most 5,000 students.' });
+
+    const departments = await pool.execute('SELECT id, name FROM departments');
+    const departmentMap = new Map(departments[0].map((d) => [d.name.toLowerCase(), d.id]));
+    const seen = new Set();
+    const imported = [];
+    const failed = [];
+
+    for (let index = 0; index < rows.length; index += 1) {
+      const row = rows[index];
+      const line = index + 2;
+      const email = String(row.email || '').trim().toLowerCase();
+      const name = String(row.name || '').trim().replace(/\s+/g, ' ');
+      const phone = row.phone ? String(row.phone).trim() : null;
+      const departmentName = String(row.department || '').trim();
+      const departmentId = departmentName ? departmentMap.get(departmentName.toLowerCase()) : null;
+
+      if (!name || name.length < 2) { failed.push({ row: line, email, error: 'Name is required.' }); continue; }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { failed.push({ row: line, email, error: 'Valid email is required.' }); continue; }
+      if (seen.has(email)) { failed.push({ row: line, email, error: 'Duplicate email in this file.' }); continue; }
+      seen.add(email);
+      if (departmentName && !departmentId) { failed.push({ row: line, email, error: `Unknown department "${departmentName}".` }); continue; }
+
+      try {
+        const result = await studentModel.createStudent({ name, email, phone, department_id: departmentId });
+        imported.push({ row: line, name, email, temporaryPassword: result.temporaryPassword });
+      } catch (error) {
+        if (error.code === 'ER_DUP_ENTRY') failed.push({ row: line, email, error: 'Email already exists in the system.' });
+        else failed.push({ row: line, email, error: 'Unable to create this student.' });
+      }
+    }
+
+    return res.status(201).json({
+      success: true,
+      message: `Import finished: ${imported.length} imported, ${failed.length} failed.`,
+      importedCount: imported.length,
+      failedCount: failed.length,
+      imported,
+      failed,
+    });
+  } catch (error) { return next(error); }
 };

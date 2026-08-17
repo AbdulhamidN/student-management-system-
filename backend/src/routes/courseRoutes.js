@@ -13,7 +13,9 @@
  */
 
 const express = require("express");
+const { authenticateToken } = require("../middleware/authMiddleware");
 const router = express.Router();
+router.use(authenticateToken);
 const courseController = require("../controllers/courseController");
 
 // IMPORTANT: specific routes before /:id so "assign" and "student"
@@ -23,6 +25,7 @@ router.get("/student/:studentId", courseController.getCoursesForStudent);
 
 router.post("/", courseController.createCourse);
 router.get("/", courseController.getAllCourses);
+router.get("/department/:departmentId", courseController.getCoursesByDepartment);
 router.get("/:id", courseController.getCourseById);
 router.put("/:id", courseController.updateCourse);
 router.delete("/:id", courseController.deleteCourse);

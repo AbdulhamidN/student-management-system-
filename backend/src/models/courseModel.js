@@ -83,6 +83,14 @@ const getCoursesForStudent = async (studentId) => {
     return rows;
 };
 
+const getCoursesByDepartment = async (departmentId) => {
+    const [rows] = await pool.execute(
+        "SELECT * FROM courses WHERE department_id = ? ORDER BY name ASC",
+        [departmentId]
+    );
+    return rows;
+};
+
 module.exports = {
     createCourse,
     getAllCourses,
@@ -90,5 +98,6 @@ module.exports = {
     updateCourse,
     deleteCourse,
     assignCourseToStudent,
-    getCoursesForStudent
+    getCoursesForStudent,
+    getCoursesByDepartment
 };
