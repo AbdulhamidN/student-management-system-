@@ -48,13 +48,7 @@ app.use(helmet({
 }));
 
 app.use(cors({
-    origin: function (origin, callback) {
-        if (!origin || allowedOrigins.includes(origin)) {
-            callback(null, true);
-            return;
-        }
-        callback(new Error("Not allowed by CORS"));
-    },
+    origin: true,
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"]
@@ -84,6 +78,8 @@ const authRoutes = require("./routes/authRoutes");
 const announcementRoutes = require("./routes/announcementRoutes");
 const protectedRoutes = require("./routes/protectedRoutes");
 
+const studentPortalRoutes = require("./routes/studentPortalRoutes");
+
 app.use("/api/auth", authRoutes);
 app.use("/api/announcements", announcementRoutes);
 app.use("/api/protected", protectedRoutes);
@@ -91,6 +87,7 @@ app.use("/api/students", studentRoutes);
 app.use("/api/teachers", teacherRoutes);
 app.use("/api/departments", departmentRoutes);
 app.use("/api/courses", courseRoutes);
+app.use("/api/student", studentPortalRoutes);
 
 /**
  * =====================================================

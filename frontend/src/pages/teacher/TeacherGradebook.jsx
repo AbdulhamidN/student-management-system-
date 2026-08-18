@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getStudentsForGradebook, updateStudentMarks } from '../../api/teacherApi';
+
 export default function TeacherGradebook() {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -109,77 +110,39 @@ export default function TeacherGradebook() {
   const filteredStudents = students.filter((s) => {
     const matchesSearch = s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           (s.email && s.email.toLowerCase().includes(searchTerm.toLowerCase()));
-    const matchesGrade = selectedGradeFilter === 'ALL' || s.grade === selectedGradeFilter;
     const matchesLetter = selectedLetterFilter === 'ALL' || s.letter_grade === selectedLetterFilter;
-    return matchesSearch && matchesGrade && matchesLetter;
+    return matchesSearch && matchesLetter;
   });
-
-  const getRankDisplay = (rank) => {
-    if (rank === 1) {
-      return (
-        <div className="flex items-center space-x-1 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-800 dark:bg-amber-950/80 dark:text-amber-300">
-          <span>🥇 1st Place</span>
-        </div>
-      );
-    }
-    if (rank === 2) {
-      return (
-        <div className="flex items-center space-x-1 rounded-full bg-slate-200 px-2.5 py-1 text-xs font-bold text-slate-700 dark:bg-slate-700 dark:text-slate-200">
-          <span>🥈 2nd Place</span>
-        </div>
-      );
-    }
-    if (rank === 3) {
-      return (
-        <div className="flex items-center space-x-1 rounded-full bg-amber-900/20 px-2.5 py-1 text-xs font-bold text-amber-800 dark:bg-amber-900/40 dark:text-amber-400">
-          <span>🥉 3rd Place</span>
-        </div>
-      );
-    }
-    return (
-      <span className="rounded bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-400">
-        Rank #{rank}
-      </span>
-    );
-  };
 
   return (
     <div className="space-y-6">
-      {/* Header Banner */}
-      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-        <div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-3xl">
-            Gradebook & Mark Entry
-          </h1>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Automatically ordered by <span className="font-semibold text-slate-700 dark:text-slate-200">Highest Total Score First</span>. Enter and update midterm, final, and coursework marks.
-          </p>
-        </div>
-
-        <div className="rounded-xl border border-indigo-100 bg-indigo-50/70 px-4 py-2 text-xs font-semibold text-indigo-700 dark:border-indigo-900/50 dark:bg-indigo-950/50 dark:text-indigo-300">
-          Max Boundaries: Mid 20 | Final 50 | Assessment 30 (Total 100)
-        </div>
+      {/* Title */}
+      <div>
+        <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-3xl">
+          Student Gradebook
+        </h1>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+          Enter and manage student midterm, final, and assessment grades.
+        </p>
       </div>
 
-      {/* Filter Controls Bar */}
+      {/* Search & Filter Bar */}
       <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-800 sm:flex-row sm:items-center sm:justify-between">
-        {/* Search */}
         <div className="relative flex-1">
           <input
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search student by name or email..."
-            className="w-full rounded-xl border border-slate-300 bg-slate-50 py-2.5 pl-4 pr-10 text-sm text-slate-900 transition focus:border-indigo-500 focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:focus:border-indigo-400"
+            className="w-full rounded-xl border border-slate-300 bg-slate-50 py-2.5 pl-4 pr-10 text-sm text-slate-900 transition focus:border-[#2f73b7] focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-white"
           />
         </div>
 
-        {/* Grade Filter */}
         <div className="flex items-center space-x-3">
           <select
             value={selectedLetterFilter}
             onChange={(e) => setSelectedLetterFilter(e.target.value)}
-            className="rounded-xl border border-slate-300 bg-slate-50 py-2.5 px-3 text-xs font-semibold text-slate-700 transition focus:border-indigo-500 focus:outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
+            className="rounded-xl border border-slate-300 bg-slate-50 py-2.5 px-3 text-xs font-semibold text-slate-700 transition focus:border-[#2f73b7] focus:outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
           >
             <option value="ALL">All Grades (A–F)</option>
             <option value="A">Grade A (90–100)</option>
@@ -191,13 +154,13 @@ export default function TeacherGradebook() {
         </div>
       </div>
 
-      {/* Student Roster Gradebook Table */}
+      {/* Student Roster Table */}
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-800">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm text-slate-600 dark:text-slate-300">
             <thead className="border-b border-slate-200 bg-slate-50 text-xs font-bold uppercase tracking-wider text-slate-500 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-400">
               <tr>
-                <th className="px-4 py-3.5">Rank</th>
+                <th className="px-4 py-3.5">#</th>
                 <th className="px-4 py-3.5">Student Name</th>
                 <th className="px-4 py-3.5">Grade Level</th>
                 <th className="px-4 py-3.5 text-center">Midterm (Max 20)</th>
@@ -209,15 +172,15 @@ export default function TeacherGradebook() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60">
-              {filteredStudents.map((student) => {
+              {filteredStudents.map((student, idx) => {
                 const gradeInfo = computeLetter(student.total_mark);
                 return (
                   <tr
                     key={student.id}
                     className="transition hover:bg-slate-50/80 dark:hover:bg-slate-700/30"
                   >
-                    <td className="whitespace-nowrap px-4 py-4 font-medium">
-                      {getRankDisplay(student.rank)}
+                    <td className="whitespace-nowrap px-4 py-4 text-xs font-bold text-slate-500">
+                      {idx + 1}
                     </td>
 
                     <td className="whitespace-nowrap px-4 py-4">
@@ -244,7 +207,7 @@ export default function TeacherGradebook() {
                     </td>
 
                     <td className="whitespace-nowrap px-4 py-4 text-center">
-                      <span className="text-base font-extrabold text-indigo-600 dark:text-indigo-400">
+                      <span className="text-base font-extrabold text-[#2f73b7] dark:text-blue-400">
                         {student.total_mark}
                       </span>
                     </td>
@@ -258,9 +221,9 @@ export default function TeacherGradebook() {
                     <td className="whitespace-nowrap px-4 py-4 text-right">
                       <button
                         onClick={() => openMarkModal(student)}
-                        className="inline-flex items-center space-x-1 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-bold text-indigo-600 transition hover:bg-indigo-100 dark:border-indigo-900/50 dark:bg-indigo-950/60 dark:text-indigo-300 dark:hover:bg-indigo-900/50"
+                        className="inline-flex items-center space-x-1 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-bold text-[#2f73b7] transition hover:bg-blue-100 dark:border-blue-900/50 dark:bg-blue-950/60 dark:text-blue-300 dark:hover:bg-blue-900/50"
                       >
-                        <span>Edit Marks</span>
+                        <span>Put Marks</span>
                       </button>
                     </td>
                   </tr>
@@ -287,7 +250,7 @@ export default function TeacherGradebook() {
             <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4 dark:border-slate-700">
               <div>
                 <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-                  Enter / Edit Marks
+                  Enter Marks
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
                   {editingStudent.name} ({editingStudent.grade})
@@ -318,7 +281,7 @@ export default function TeacherGradebook() {
               {/* Midterm Mark Input */}
               <div>
                 <div className="flex justify-between text-xs font-bold text-slate-700 dark:text-slate-300">
-                  <label htmlFor="midMark">Midterm Exam (`mid_mark`)</label>
+                  <label htmlFor="midMark">Midterm Exam</label>
                   <span className="text-slate-400">Range: 0 – 20 pts</span>
                 </div>
                 <input
@@ -329,7 +292,7 @@ export default function TeacherGradebook() {
                   max="20"
                   value={midMarkInput}
                   onChange={(e) => setMidMarkInput(e.target.value)}
-                  className="mt-1.5 w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2 text-sm text-slate-900 transition focus:border-indigo-500 focus:bg-white focus:outline-none dark:border-slate-600 dark:bg-slate-900 dark:text-white"
+                  className="mt-1.5 w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2 text-sm text-slate-900 transition focus:border-[#2f73b7] focus:bg-white focus:outline-none dark:border-slate-600 dark:bg-slate-900 dark:text-white"
                   required
                 />
               </div>
@@ -337,7 +300,7 @@ export default function TeacherGradebook() {
               {/* Final Exam Input */}
               <div>
                 <div className="flex justify-between text-xs font-bold text-slate-700 dark:text-slate-300">
-                  <label htmlFor="finalMark">Final Exam (`final_mark`)</label>
+                  <label htmlFor="finalMark">Final Exam</label>
                   <span className="text-slate-400">Range: 0 – 50 pts</span>
                 </div>
                 <input
@@ -348,7 +311,7 @@ export default function TeacherGradebook() {
                   max="50"
                   value={finalMarkInput}
                   onChange={(e) => setFinalMarkInput(e.target.value)}
-                  className="mt-1.5 w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2 text-sm text-slate-900 transition focus:border-indigo-500 focus:bg-white focus:outline-none dark:border-slate-600 dark:bg-slate-900 dark:text-white"
+                  className="mt-1.5 w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2 text-sm text-slate-900 transition focus:border-[#2f73b7] focus:bg-white focus:outline-none dark:border-slate-600 dark:bg-slate-900 dark:text-white"
                   required
                 />
               </div>
@@ -356,7 +319,7 @@ export default function TeacherGradebook() {
               {/* Assessment Input */}
               <div>
                 <div className="flex justify-between text-xs font-bold text-slate-700 dark:text-slate-300">
-                  <label htmlFor="assessmentMark">Assessment / Coursework (`assessment_mark`)</label>
+                  <label htmlFor="assessmentMark">Assessment / Coursework</label>
                   <span className="text-slate-400">Range: 0 – 30 pts</span>
                 </div>
                 <input
@@ -367,7 +330,7 @@ export default function TeacherGradebook() {
                   max="30"
                   value={assessmentMarkInput}
                   onChange={(e) => setAssessmentMarkInput(e.target.value)}
-                  className="mt-1.5 w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2 text-sm text-slate-900 transition focus:border-indigo-500 focus:bg-white focus:outline-none dark:border-slate-600 dark:bg-slate-900 dark:text-white"
+                  className="mt-1.5 w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2 text-sm text-slate-900 transition focus:border-[#2f73b7] focus:bg-white focus:outline-none dark:border-slate-600 dark:bg-slate-900 dark:text-white"
                   required
                 />
               </div>
@@ -376,7 +339,7 @@ export default function TeacherGradebook() {
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900/60">
                 <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
                   <span>Calculated Total Score:</span>
-                  <span className="text-base font-extrabold text-indigo-600 dark:text-indigo-400">
+                  <span className="text-base font-extrabold text-[#2f73b7] dark:text-blue-400">
                     {modalTotal} / 100
                   </span>
                 </div>
@@ -404,7 +367,7 @@ export default function TeacherGradebook() {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="rounded-xl bg-indigo-600 px-5 py-2 text-xs font-bold text-white shadow-md transition hover:bg-indigo-700 active:scale-95 disabled:opacity-50"
+                  className="rounded-xl bg-[#2f73b7] px-5 py-2 text-xs font-bold text-white shadow-md transition hover:bg-[#285fa2] active:scale-95 disabled:opacity-50"
                 >
                   {saving ? 'Saving...' : 'Save Marks'}
                 </button>

@@ -1,7 +1,7 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
-export default function TeacherLayout({ darkMode, toggleDarkMode }) {
+export default function StudentLayout({ darkMode, toggleDarkMode }) {
   const { logout } = useAuth();
   const navigate = useNavigate();
 
@@ -13,20 +13,20 @@ export default function TeacherLayout({ darkMode, toggleDarkMode }) {
   return (
     <div className="flex h-screen dark:bg-gray-900 dark:text-white">
       <aside className="w-64 bg-gray-800 text-white p-4 flex flex-col">
-        <div className="mb-8 text-xl font-bold px-2">Teacher Panel</div>
+        <div className="mb-8 text-xl font-bold px-2">Student Panel</div>
         <nav className="space-y-2 flex-1">
           <NavLink
-            to="/teacher/gradebook"
+            to="/student/results"
             className={({ isActive }) =>
               `block py-2 px-4 rounded transition-colors ${
                 isActive ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'
               }`
             }
           >
-            Put Student Grades
+            Academic Results
           </NavLink>
           <NavLink
-            to="/teacher/profile"
+            to="/student/profile"
             className={({ isActive }) =>
               `block py-2 px-4 rounded transition-colors ${
                 isActive ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'

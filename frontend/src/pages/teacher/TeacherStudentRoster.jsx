@@ -1,10 +1,19 @@
 import { useState, useEffect } from 'react';
 import { getStudentsForGradebook } from '../../api/teacherApi';
+import { sendTeacherNotification } from '../../api/studentPortalApi';
 
 export default function TeacherStudentRoster() {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Send Notification Modal State
+  const [notifStudent, setNotifStudent] = useState(null);
+  const [notifTitle, setNotifTitle] = useState('');
+  const [notifMessage, setNotifMessage] = useState('');
+  const [sendingNotif, setSendingNotif] = useState(false);
+  const [notifSuccess, setNotifSuccess] = useState('');
+  const [notifError, setNotifError] = useState('');
 
   useEffect(() => {
     let isMounted = true;
@@ -22,6 +31,43 @@ export default function TeacherStudentRoster() {
       isMounted = false;
     };
   }, []);
+
+  const openNotifModal = (student) => {
+    setNotifStudent(student);
+    setNotifTitle('');
+    setNotifMessage('');
+    setNotifSuccess('');
+    setNotifError('');
+  };
+
+  const handleSendNotification = async (e) => {
+    e.preventDefault();
+    setNotifSuccess('');
+    setNotifError('');
+
+    if (!notifTitle.trim() || !notifMessage.trim()) {
+      setNotifError('Title and message are required.');
+      return;
+    }
+
+    try {
+      setSendingNotif(true);
+      await sendTeacherNotification({
+        recipient_student_id: notifStudent.id,
+        title: notifTitle,
+        message: notifMessage,
+      });
+
+      setNotifSuccess(`Notification sent to ${notifStudent.name}!`);
+      setTimeout(() => {
+        setNotifStudent(null);
+      }, 900);
+    } catch (err) {
+      setNotifError(err.message || 'Failed to send notification.');
+    } finally {
+      setSendingNotif(false);
+    }
+  };
 
   const filteredStudents = students.filter((s) => {
     const term = searchTerm.toLowerCase();
@@ -130,11 +176,20 @@ export default function TeacherStudentRoster() {
               </div>
             </div>
 
-            {student.notes && (
-              <div className="mt-3 rounded-xl bg-slate-50 p-2.5 text-xs text-slate-500 italic dark:bg-slate-900/60 dark:text-slate-400">
-                "{student.notes}"
-              </div>
-            )}
+            <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between">
+              {student.notes ? (
+                <span className="text-xs text-slate-400 italic truncate max-w-[160px]">"{student.notes}"</span>
+              ) : (
+                <span className="text-xs text-slate-400">Read-Only Info</span>
+              )}
+
+              <button
+                onClick={() => openNotifModal(student)}
+                className="inline-flex items-center space-x-1 rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-xs font-bold text-indigo-700 transition hover:bg-indigo-100 dark:border-indigo-900/50 dark:bg-indigo-950/60 dark:text-indigo-300"
+              >
+                <span>🔔 Notify Student</span>
+              </button>
+            </div>
           </div>
         ))}
 
@@ -144,6 +199,85 @@ export default function TeacherStudentRoster() {
           </div>
         )}
       </div>
+
+      {/* Send Notification Modal */}
+      {notifStudent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-slate-800">
+            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4 dark:border-slate-700">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Send Notification</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">To: {notifStudent.name} ({notifStudent.grade})</p>
+              </div>
+              <button
+                onClick={() => setNotifStudent(null)}
+                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-700"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSendNotification} className="space-y-4 p-6">
+              {notifError && (
+                <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-semibold text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/60 dark:text-rose-300">
+                  ⚠️ {notifError}
+                </div>
+              )}
+
+              {notifSuccess && (
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs font-semibold text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/60 dark:text-emerald-300">
+                  ✅ {notifSuccess}
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase dark:text-slate-300">
+                  Notification Title
+                </label>
+                <input
+                  type="text"
+                  value={notifTitle}
+                  onChange={(e) => setNotifTitle(e.target.value)}
+                  placeholder="e.g. Project Feedback & Guidance"
+                  className="mt-1.5 w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none dark:border-slate-600 dark:bg-slate-900 dark:text-white"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase dark:text-slate-300">
+                  Notification Message
+                </label>
+                <textarea
+                  rows="4"
+                  value={notifMessage}
+                  onChange={(e) => setNotifMessage(e.target.value)}
+                  placeholder="Write message content for the student..."
+                  className="mt-1.5 w-full rounded-xl border border-slate-300 bg-slate-50 p-3 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none dark:border-slate-600 dark:bg-slate-900 dark:text-white"
+                  required
+                ></textarea>
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setNotifStudent(null)}
+                  className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={sendingNotif}
+                  className="rounded-xl bg-indigo-600 px-5 py-2 text-xs font-bold text-white shadow-md hover:bg-indigo-700 active:scale-95 disabled:opacity-50"
+                >
+                  {sendingNotif ? 'Sending...' : 'Send Notification'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -5,6 +5,7 @@ function normalizeTeacher(data = {}) {
   return {
     name: String(data.name || '').trim().replace(/\s+/g, ' '),
     email: String(data.email || '').trim().toLowerCase(),
+    department_id: data.department_id ? Number(data.department_id) : null,
     department: String(data.department || '').trim(),
     subject: String(data.subject || '').trim(),
     phone: data.phone ? String(data.phone).trim() : null,
@@ -12,17 +13,30 @@ function normalizeTeacher(data = {}) {
   };
 }
 
+async function resolveDepartmentName(deptId, fallbackName) {
+  if (deptId) {
+    try {
+      const [rows] = await pool.execute('SELECT name FROM departments WHERE id = ?', [deptId]);
+      if (rows[0]?.name) return rows[0].name;
+    } catch (e) {}
+  }
+  return fallbackName || null;
+}
+
 async function getTeacherByUserId(userId) {
   const [rows] = await pool.execute(`
-    SELECT t.id AS id, t.id AS teacher_id, t.user_id,
+    SELECT t.id AS id, t.id AS teacher_id, t.user_id, t.department_id,
            COALESCE(t.name, u.name) AS name,
            u.email,
-           t.department,
+           COALESCE(d.name, t.department) AS department,
+           COALESCE(d.name, t.department) AS department_name,
            t.subject,
            t.phone,
-           t.bio
+           t.bio,
+           (SELECT COUNT(*) FROM teacher_courses tc WHERE tc.teacher_id = t.id) AS course_count
     FROM teachers t
     JOIN users u ON u.id = t.user_id
+    LEFT JOIN departments d ON d.id = t.department_id
     WHERE t.user_id = ?
     LIMIT 1
   `, [userId]);
@@ -31,15 +45,18 @@ async function getTeacherByUserId(userId) {
 
 async function getTeacherById(id) {
   const [rows] = await pool.execute(`
-    SELECT t.id AS id, t.id AS teacher_id, t.user_id,
+    SELECT t.id AS id, t.id AS teacher_id, t.user_id, t.department_id,
            COALESCE(t.name, u.name) AS name,
            u.email,
-           t.department,
+           COALESCE(d.name, t.department) AS department,
+           COALESCE(d.name, t.department) AS department_name,
            t.subject,
            t.phone,
-           t.bio
+           t.bio,
+           (SELECT COUNT(*) FROM teacher_courses tc WHERE tc.teacher_id = t.id) AS course_count
     FROM teachers t
     JOIN users u ON u.id = t.user_id
+    LEFT JOIN departments d ON d.id = t.department_id
     WHERE t.id = ?
     LIMIT 1
   `, [id]);
@@ -48,10 +65,15 @@ async function getTeacherById(id) {
 
 async function getAllTeachers() {
   const [rows] = await pool.execute(`
-    SELECT t.id, t.id AS teacher_id, t.user_id, t.phone, t.department, t.subject, t.bio,
-           COALESCE(t.name, u.name) AS name, u.email
+    SELECT t.id, t.id AS teacher_id, t.user_id, t.phone, t.department_id,
+           COALESCE(d.name, t.department) AS department,
+           COALESCE(d.name, t.department) AS department_name,
+           t.subject, t.bio,
+           COALESCE(t.name, u.name) AS name, u.email,
+           (SELECT COUNT(*) FROM teacher_courses tc WHERE tc.teacher_id = t.id) AS course_count
     FROM teachers t
     JOIN users u ON u.id = t.user_id
+    LEFT JOIN departments d ON d.id = t.department_id
     ORDER BY u.name ASC
   `);
   return rows;
@@ -59,6 +81,7 @@ async function getAllTeachers() {
 
 async function updateTeacherProfile(userId, data) {
   const teacher = normalizeTeacher(data);
+  const deptName = await resolveDepartmentName(teacher.department_id, teacher.department);
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
@@ -66,13 +89,13 @@ async function updateTeacherProfile(userId, data) {
 
     if (existing.length === 0) {
       await connection.execute(
-        'INSERT INTO teachers (user_id, name, department, subject, phone, bio) VALUES (?, ?, ?, ?, ?, ?)',
-        [userId, teacher.name, teacher.department, teacher.subject, teacher.phone, teacher.bio]
+        'INSERT INTO teachers (user_id, name, department_id, department, subject, phone, bio) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [userId, teacher.name, teacher.department_id, deptName, teacher.subject, teacher.phone, teacher.bio]
       );
     } else {
       await connection.execute(
-        'UPDATE teachers SET name = ?, department = ?, subject = ?, phone = ?, bio = ? WHERE user_id = ?',
-        [teacher.name, teacher.department, teacher.subject, teacher.phone, teacher.bio, userId]
+        'UPDATE teachers SET name = ?, department_id = ?, department = ?, subject = ?, phone = ?, bio = ? WHERE user_id = ?',
+        [teacher.name, teacher.department_id, deptName, teacher.subject, teacher.phone, teacher.bio, userId]
       );
     }
 
@@ -92,6 +115,7 @@ async function updateTeacherProfile(userId, data) {
 
 async function createTeacher(data) {
   const teacher = normalizeTeacher(data);
+  const deptName = await resolveDepartmentName(teacher.department_id, teacher.department);
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
@@ -101,11 +125,19 @@ async function createTeacher(data) {
       [teacher.name, teacher.email, passwordHash]
     );
     const [teacherResult] = await connection.execute(
-      'INSERT INTO teachers (user_id, name, department, subject, phone, bio) VALUES (?, ?, ?, ?, ?, ?)',
-      [userResult.insertId, teacher.name, teacher.department, teacher.subject, teacher.phone, teacher.bio]
+      'INSERT INTO teachers (user_id, name, department_id, department, subject, phone, bio) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [userResult.insertId, teacher.name, teacher.department_id, deptName, teacher.subject, teacher.phone, teacher.bio]
     );
+
+    const teacherId = teacherResult.insertId;
+    if (Array.isArray(data.courseIds) && data.courseIds.length > 0) {
+      for (const courseId of data.courseIds) {
+        await connection.execute('INSERT IGNORE INTO teacher_courses (teacher_id, course_id) VALUES (?, ?)', [teacherId, Number(courseId)]);
+      }
+    }
+
     await connection.commit();
-    return { id: teacherResult.insertId, userId: userResult.insertId };
+    return { id: teacherId, userId: userResult.insertId, temporaryPassword: data.password || 'Password123!' };
   } catch (error) {
     await connection.rollback();
     throw error;
@@ -116,6 +148,7 @@ async function createTeacher(data) {
 
 async function updateTeacher(id, data) {
   const teacher = normalizeTeacher(data);
+  const deptName = await resolveDepartmentName(teacher.department_id, teacher.department);
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
@@ -125,9 +158,17 @@ async function updateTeacher(id, data) {
     if (!existingRows[0]) return { affectedRows: 0 };
     await connection.execute('UPDATE users SET name = ?, email = ? WHERE id = ? AND role = \'teacher\'', [teacher.name, teacher.email, existingRows[0].user_id]);
     const [result] = await connection.execute(
-      'UPDATE teachers SET name = ?, department = ?, subject = ?, phone = ?, bio = ? WHERE id = ?',
-      [teacher.name, teacher.department, teacher.subject, teacher.phone, teacher.bio, id]
+      'UPDATE teachers SET name = ?, department_id = ?, department = ?, subject = ?, phone = ?, bio = ? WHERE id = ?',
+      [teacher.name, teacher.department_id, deptName, teacher.subject, teacher.phone, teacher.bio, id]
     );
+
+    if (Array.isArray(data.courseIds)) {
+      await connection.execute('DELETE FROM teacher_courses WHERE teacher_id = ?', [id]);
+      for (const courseId of data.courseIds) {
+        await connection.execute('INSERT IGNORE INTO teacher_courses (teacher_id, course_id) VALUES (?, ?)', [id, Number(courseId)]);
+      }
+    }
+
     await connection.commit();
     return result;
   } catch (error) {
@@ -156,6 +197,21 @@ async function deleteTeacher(id) {
   }
 }
 
+async function getTeacherCourses(teacherId) {
+  try {
+    const [rows] = await pool.execute(`
+      SELECT c.*, d.name AS department_name
+      FROM courses c
+      INNER JOIN teacher_courses tc ON c.id = tc.course_id
+      LEFT JOIN departments d ON c.department_id = d.id
+      WHERE tc.teacher_id = ?
+    `, [teacherId]);
+    return rows;
+  } catch (e) {
+    return [];
+  }
+}
+
 module.exports = {
   normalizeTeacher,
   getTeacherByUserId,
@@ -165,4 +221,5 @@ module.exports = {
   createTeacher,
   updateTeacher,
   deleteTeacher,
+  getTeacherCourses,
 };

@@ -113,3 +113,22 @@ exports.deleteStudent = async (req, res, next) => {
     return next(error);
   }
 };
+
+exports.getStudentCourses = async (req, res, next) => {
+  try {
+    const courses = await studentModel.getStudentCourses(req.params.id);
+    return res.json({ success: true, data: courses });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+exports.setStudentCourses = async (req, res, next) => {
+  try {
+    const { courseIds } = req.body;
+    await studentModel.setStudentCourses(req.params.id, courseIds || []);
+    return res.json({ success: true, message: 'Student courses updated successfully.' });
+  } catch (error) {
+    return next(error);
+  }
+};

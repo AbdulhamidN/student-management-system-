@@ -74,3 +74,12 @@ exports.deleteTeacher = async (req, res, next) => {
     return next(error);
   }
 };
+
+exports.getTeacherCourses = async (req, res, next) => {
+  try {
+    const courses = await teacherModel.getTeacherCourses(req.params.id);
+    return res.json({ success: true, data: courses });
+  } catch (error) {
+    return next(error);
+  }
+};

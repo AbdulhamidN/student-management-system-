@@ -98,18 +98,24 @@ export default function Departments() {
           <table className="min-w-full text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
               <tr>
-                <th className="px-5 py-4">Name</th>
+                <th className="px-5 py-4">Department Name</th>
+                <th className="px-5 py-4 text-center">Courses</th>
+                <th className="px-5 py-4 text-center">Teachers</th>
+                <th className="px-5 py-4 text-center">Students</th>
                 <th className="px-5 py-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan="2" className="px-5 py-12 text-center text-slate-500">Loading departments...</td></tr>
+                <tr><td colSpan="5" className="px-5 py-12 text-center text-slate-500">Loading departments...</td></tr>
               ) : departments.length === 0 ? (
-                <tr><td colSpan="2" className="px-5 py-12 text-center text-slate-500">No departments yet.</td></tr>
+                <tr><td colSpan="5" className="px-5 py-12 text-center text-slate-500">No departments yet.</td></tr>
               ) : departments.map((department) => (
                 <tr key={department.id} className="border-t border-slate-100 hover:bg-slate-50">
                   <td className="px-5 py-4 font-semibold text-slate-800">{department.name}</td>
+                  <td className="px-5 py-4 text-center text-slate-600 font-medium">{department.course_count || 0}</td>
+                  <td className="px-5 py-4 text-center text-slate-600 font-medium">{department.teacher_count || 0}</td>
+                  <td className="px-5 py-4 text-center text-slate-600 font-medium">{department.student_count || 0}</td>
                   <td className="px-5 py-4">
                     <div className="flex justify-end gap-2">
                       <button onClick={() => { setEditing(department); setShowForm(true); }} className="rounded-lg p-2 text-blue-600 hover:bg-blue-50" title="Edit"><FaEdit /></button>

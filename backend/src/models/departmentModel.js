@@ -16,7 +16,15 @@ const createDepartment = async (department) => {
 };
 
 const getAllDepartments = async () => {
-    const [rows] = await pool.execute("SELECT * FROM departments");
+    const sql = `
+        SELECT d.*,
+          (SELECT COUNT(*) FROM students s WHERE s.department_id = d.id) AS student_count,
+          (SELECT COUNT(*) FROM teachers t WHERE t.department_id = d.id) AS teacher_count,
+          (SELECT COUNT(*) FROM courses c WHERE c.department_id = d.id) AS course_count
+        FROM departments d
+        ORDER BY d.name ASC
+    `;
+    const [rows] = await pool.execute(sql);
     return rows;
 };
 

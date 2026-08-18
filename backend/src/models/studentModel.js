@@ -11,12 +11,13 @@ function calculateLetterGrade(totalMark) {
 
 function normalizeStudent(student = {}) {
   return {
-    teacher_id: student.teacher_id ? Number(student.teacher_id) : null,
     name: String(student.name || '').trim().replace(/\s+/g, ' '),
+    email: student.email ? String(student.email).trim().toLowerCase() : null,
+    phone: student.phone ? String(student.phone).trim() : null,
+    department_id: student.department_id ? Number(student.department_id) : null,
     grade: String(student.grade || 'Grade 10').trim(),
     parent_name: student.parent_name ? String(student.parent_name).trim() : null,
     parent_phone: student.parent_phone ? String(student.parent_phone).trim() : null,
-    email: student.email ? String(student.email).trim().toLowerCase() : null,
     address: student.address ? String(student.address).trim() : null,
     date_of_birth: student.date_of_birth || null,
     enrollment_date: student.enrollment_date || null,
@@ -30,21 +31,23 @@ function normalizeStudent(student = {}) {
 
 async function getAllStudents(options = {}) {
   let query = `
-    SELECT s.id, s.teacher_id, s.name, s.grade, s.parent_name, s.parent_phone,
-           s.email, s.address, s.date_of_birth, s.enrollment_date, s.status, s.notes,
-           s.mid_mark, s.final_mark, s.assessment_mark, s.total_mark, s.created_at,
-           t.name AS teacher_name, t.department AS teacher_department
+    SELECT s.id, s.department_id, s.name, s.email, s.phone, s.grade,
+           s.parent_name, s.parent_phone, s.address, s.date_of_birth,
+           s.enrollment_date, s.status, s.notes, s.mid_mark, s.final_mark,
+           s.assessment_mark, s.total_mark, s.created_at,
+           d.name AS department_name,
+           (SELECT COUNT(*) FROM student_courses sc WHERE sc.student_id = s.id) AS course_count
     FROM students s
-    LEFT JOIN teachers t ON t.id = s.teacher_id
+    LEFT JOIN departments d ON d.id = s.department_id
   `;
   const params = [];
 
-  if (options.teacher_id) {
-    query += ' WHERE s.teacher_id = ?';
-    params.push(options.teacher_id);
+  if (options.department_id) {
+    query += ' WHERE s.department_id = ?';
+    params.push(options.department_id);
   }
 
-  query += ' ORDER BY s.total_mark DESC, s.name ASC';
+  query += ' ORDER BY s.id DESC';
 
   const [rows] = await pool.execute(query, params);
 
@@ -61,12 +64,14 @@ async function getAllStudents(options = {}) {
 
 async function getStudentById(id) {
   const [rows] = await pool.execute(`
-    SELECT s.id, s.teacher_id, s.name, s.grade, s.parent_name, s.parent_phone,
-           s.email, s.address, s.date_of_birth, s.enrollment_date, s.status, s.notes,
-           s.mid_mark, s.final_mark, s.assessment_mark, s.total_mark, s.created_at,
-           t.name AS teacher_name, t.department AS teacher_department
+    SELECT s.id, s.department_id, s.name, s.email, s.phone, s.grade,
+           s.parent_name, s.parent_phone, s.address, s.date_of_birth,
+           s.enrollment_date, s.status, s.notes, s.mid_mark, s.final_mark,
+           s.assessment_mark, s.total_mark, s.created_at,
+           d.name AS department_name,
+           (SELECT COUNT(*) FROM student_courses sc WHERE sc.student_id = s.id) AS course_count
     FROM students s
-    LEFT JOIN teachers t ON t.id = s.teacher_id
+    LEFT JOIN departments d ON d.id = s.department_id
     WHERE s.id = ?
     LIMIT 1
   `, [id]);
@@ -108,8 +113,7 @@ async function updateStudentMarks(id, { mid_mark, final_mark, assessment_mark })
     throw Object.assign(new Error('Student not found.'), { statusCode: 404 });
   }
 
-  const updatedStudent = await getStudentById(id);
-  return updatedStudent;
+  return await getStudentById(id);
 }
 
 async function createStudent(studentData) {
@@ -117,10 +121,10 @@ async function createStudent(studentData) {
   const total_mark = data.mid_mark + data.final_mark + data.assessment_mark;
 
   const [result] = await pool.execute(`
-    INSERT INTO students (teacher_id, name, grade, parent_name, parent_phone, email, address, date_of_birth, enrollment_date, status, notes, mid_mark, final_mark, assessment_mark, total_mark)
+    INSERT INTO students (department_id, name, grade, parent_name, parent_phone, email, address, date_of_birth, enrollment_date, status, notes, mid_mark, final_mark, assessment_mark, total_mark)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `, [
-    data.teacher_id,
+    data.department_id,
     data.name,
     data.grade,
     data.parent_name,
@@ -146,12 +150,12 @@ async function updateStudent(id, studentData) {
 
   const [result] = await pool.execute(`
     UPDATE students
-    SET teacher_id = ?, name = ?, grade = ?, parent_name = ?, parent_phone = ?,
+    SET department_id = ?, name = ?, grade = ?, parent_name = ?, parent_phone = ?,
         email = ?, address = ?, date_of_birth = ?, status = ?, notes = ?,
         mid_mark = ?, final_mark = ?, assessment_mark = ?, total_mark = ?
     WHERE id = ?
   `, [
-    data.teacher_id,
+    data.department_id,
     data.name,
     data.grade,
     data.parent_name,
@@ -176,6 +180,27 @@ async function deleteStudent(id) {
   return result;
 }
 
+async function getStudentCourses(studentId) {
+  const sql = `
+    SELECT c.*, d.name AS department_name
+    FROM courses c
+    INNER JOIN student_courses sc ON c.id = sc.course_id
+    LEFT JOIN departments d ON c.department_id = d.id
+    WHERE sc.student_id = ?
+  `;
+  const [rows] = await pool.execute(sql, [studentId]);
+  return rows;
+}
+
+async function setStudentCourses(studentId, courseIds = []) {
+  await pool.execute('DELETE FROM student_courses WHERE student_id = ?', [studentId]);
+  if (Array.isArray(courseIds) && courseIds.length > 0) {
+    const values = courseIds.map((cId) => `(${Number(studentId)}, ${Number(cId)})`).join(', ');
+    await pool.execute(`INSERT INTO student_courses (student_id, course_id) VALUES ${values}`);
+  }
+  return true;
+}
+
 module.exports = {
   calculateLetterGrade,
   normalizeStudent,
@@ -185,4 +210,6 @@ module.exports = {
   createStudent,
   updateStudent,
   deleteStudent,
+  getStudentCourses,
+  setStudentCourses,
 };

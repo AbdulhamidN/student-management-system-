@@ -12,6 +12,10 @@ router.get('/:id', authenticateToken, studentController.getStudentById);
 router.patch('/:id/marks', authenticateToken, requireTeacherOrAdmin, studentController.updateStudentMarks);
 router.put('/:id/marks', authenticateToken, requireTeacherOrAdmin, studentController.updateStudentMarks);
 
+// Student course assignments
+router.get('/:id/courses', authenticateToken, studentController.getStudentCourses);
+router.put('/:id/courses', authenticateToken, requireAdmin, studentController.setStudentCourses);
+
 // Student registration CRUD (Admin ONLY - Teachers get 403 Forbidden)
 router.post('/', authenticateToken, requireAdmin, studentController.createStudent);
 router.put('/:id', authenticateToken, requireAdmin, studentController.updateStudent);
