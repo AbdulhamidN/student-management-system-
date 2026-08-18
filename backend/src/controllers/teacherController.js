@@ -1,47 +1,67 @@
 const teacherModel = require('../models/teacherModel');
 
-function validate(data) {
-  if (!data.name || data.name.length < 2 || data.name.length > 100) return 'Name must be between 2 and 100 characters.';
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) return 'A valid email address is required.';
-  if (data.phone && data.phone.length > 20) return 'Phone number must be 20 characters or fewer.';
-  if (!Number.isInteger(data.department_id) || data.department_id < 1) return 'Department is required.';
-  return null;
-}
-
-exports.getAllTeachers = async (req, res, next) => {
-  try { return res.json({ success: true, data: await teacherModel.getAllTeachers() }); }
-  catch (error) { return next(error); }
+exports.getTeacherProfile = async (req, res, next) => {
+  try {
+    const profile = await teacherModel.getTeacherByUserId(req.user.id);
+    if (!profile) {
+      return res.status(404).json({ success: false, message: 'Teacher profile not found.' });
+    }
+    return res.json({ success: true, data: profile });
+  } catch (error) {
+    return next(error);
+  }
 };
 
-exports.getTeacherCourses = async (req, res, next) => {
-  try { return res.json({ success: true, data: await teacherModel.getTeacherCourses(req.params.id) }); }
-  catch (error) { return next(error); }
+exports.updateTeacherProfile = async (req, res, next) => {
+  try {
+    const { name, department, subject, phone, bio } = req.body;
+    if (!name || name.trim().length < 2) {
+      return res.status(400).json({ success: false, message: 'Name must be at least 2 characters long.' });
+    }
+    await teacherModel.updateTeacherProfile(req.user.id, { name, department, subject, phone, bio });
+    const updated = await teacherModel.getTeacherByUserId(req.user.id);
+    return res.json({ success: true, message: 'Profile updated successfully.', data: updated });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+exports.getAllTeachers = async (req, res, next) => {
+  try {
+    return res.json({ success: true, data: await teacherModel.getAllTeachers() });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+exports.getTeacherById = async (req, res, next) => {
+  try {
+    const teacher = await teacherModel.getTeacherById(req.params.id);
+    if (!teacher) return res.status(404).json({ success: false, message: 'Teacher not found.' });
+    return res.json({ success: true, data: teacher });
+  } catch (error) {
+    return next(error);
+  }
 };
 
 exports.createTeacher = async (req, res, next) => {
   try {
-    const data = teacherModel.normalizeTeacher(req.body);
-    const validationError = validate(data);
-    if (validationError) return res.status(400).json({ success: false, message: validationError });
-    const result = await teacherModel.createTeacher(data);
+    const result = await teacherModel.createTeacher(req.body);
     return res.status(201).json({ success: true, message: 'Teacher created successfully.', ...result });
   } catch (error) {
     if (error.code === 'ER_DUP_ENTRY') return res.status(409).json({ success: false, message: 'A user with this email already exists.' });
-    return res.status(error.statusCode || 500).json({ success: false, message: error.message || 'Unable to create teacher.' });
+    return next(error);
   }
 };
 
 exports.updateTeacher = async (req, res, next) => {
   try {
-    const data = teacherModel.normalizeTeacher(req.body);
-    const validationError = validate(data);
-    if (validationError) return res.status(400).json({ success: false, message: validationError });
-    const result = await teacherModel.updateTeacher(req.params.id, data);
+    const result = await teacherModel.updateTeacher(req.params.id, req.body);
     if (!result.affectedRows) return res.status(404).json({ success: false, message: 'Teacher not found.' });
     return res.json({ success: true, message: 'Teacher updated successfully.' });
   } catch (error) {
     if (error.code === 'ER_DUP_ENTRY') return res.status(409).json({ success: false, message: 'A user with this email already exists.' });
-    return res.status(error.statusCode || 500).json({ success: false, message: error.message || 'Unable to update teacher.' });
+    return next(error);
   }
 };
 
@@ -49,6 +69,17 @@ exports.deleteTeacher = async (req, res, next) => {
   try {
     const result = await teacherModel.deleteTeacher(req.params.id);
     if (!result.affectedRows) return res.status(404).json({ success: false, message: 'Teacher not found.' });
-    return res.json({ success: true, message: 'Teacher deactivated successfully.' });
-  } catch (error) { return next(error); }
+    return res.json({ success: true, message: 'Teacher deleted successfully.' });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+exports.getTeacherCourses = async (req, res, next) => {
+  try {
+    const courses = await teacherModel.getTeacherCourses(req.params.id);
+    return res.json({ success: true, data: courses });
+  } catch (error) {
+    return next(error);
+  }
 };

@@ -18,10 +18,13 @@ function StudentModal({ student, departments, onClose, onSaved }) {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!form.department_id) { setCourses([]); setSelectedCourses([]); return; }
+    if (!form.department_id) {
+      setCourses([]);
+      return;
+    }
     setLoadingCourses(true);
     getCoursesByDepartment(form.department_id)
-      .then(setCourses)
+      .then((data) => setCourses(data || []))
       .catch((err) => setError(err.message))
       .finally(() => setLoadingCourses(false));
   }, [form.department_id]);
@@ -63,8 +66,23 @@ function StudentModal({ student, departments, onClose, onSaved }) {
           <Field label="Department"><select required value={form.department_id} onChange={(e) => { setForm({ ...form, department_id: e.target.value }); setSelectedCourses([]); }} className="input"><option value="">Select department</option>{departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}</select></Field>
         </div>
         <div>
-          <label className="mb-2 block text-sm font-semibold text-slate-700">Courses</label>
-          {!form.department_id ? <p className="rounded-lg bg-slate-50 p-3 text-sm text-slate-500">Choose a department to see its courses.</p> : loadingCourses ? <p className="text-sm text-slate-500">Loading courses...</p> : <div className="grid gap-2 sm:grid-cols-3">{courses.map((course) => <label key={course.id} className="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 p-3 hover:border-[#2f73b7]"><input type="checkbox" checked={selectedCourses.includes(course.id)} onChange={() => toggleCourse(course.id)} className="h-4 w-4" /> <span className="text-sm text-slate-700">{course.name}</span></label>)}</div>}
+          <label className="mb-2 block text-sm font-semibold text-slate-700">Department Courses</label>
+          {!form.department_id ? (
+            <p className="rounded-lg bg-slate-50 p-3 text-sm text-slate-500">Select a department above to see its courses.</p>
+          ) : loadingCourses ? (
+            <p className="text-sm text-slate-500">Loading department courses...</p>
+          ) : courses.length === 0 ? (
+            <p className="rounded-lg bg-slate-50 p-3 text-sm text-slate-500">No courses registered under this department.</p>
+          ) : (
+            <div className="grid gap-2 sm:grid-cols-3">
+              {courses.map((course) => (
+                <label key={course.id} className="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 p-3 hover:border-[#2f73b7]">
+                  <input type="checkbox" checked={selectedCourses.includes(course.id)} onChange={() => toggleCourse(course.id)} className="h-4 w-4 text-blue-600 rounded" />
+                  <span className="text-sm font-medium text-slate-700">{course.name}</span>
+                </label>
+              ))}
+            </div>
+          )}
         </div>
         <div className="flex justify-end gap-3 border-t border-slate-100 pt-5"><button type="button" onClick={onClose} className="rounded-xl bg-slate-100 px-5 py-2.5 font-semibold text-slate-700 hover:bg-slate-200">Cancel</button><button disabled={saving} className="rounded-xl px-5 py-2.5 font-semibold text-white disabled:opacity-50" style={{ backgroundColor: BLUE }}>{saving ? 'Saving...' : student ? 'Save Changes' : 'Create Student'}</button></div>
       </form>
@@ -86,7 +104,21 @@ export default function Students() {
   const [count, setCount] = useState(0); const [search, setSearch] = useState(''); const [loading, setLoading] = useState(true); const [error, setError] = useState('');
   const [editing, setEditing] = useState(null); const [showForm, setShowForm] = useState(false); const [importResult, setImportResult] = useState(null); const [credentials, setCredentials] = useState(null); const fileRef = useRef(null);
 
-  const load = async () => { setLoading(true); try { const [s, d, c] = await Promise.all([getStudents(), getDepartments(), getStudentCount()]); setStudents(s); setDepartments(d.filter((item) => ['CS', 'IT', 'IS'].includes(item.name))); setCount(c); } catch (err) { setError(err.message); } finally { setLoading(false); } };
+  const load = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const [s, d, c] = await Promise.all([getStudents(), getDepartments(), getStudentCount()]);
+      setStudents(s || []);
+      setDepartments(d || []);
+      setCount(c || 0);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => { load(); }, []);
 
   const filtered = useMemo(() => students.filter((s) => (!department || String(s.department_id) === String(department)) && (`${s.name} ${s.email}`.toLowerCase().includes(search.toLowerCase()))), [students, department, search]);

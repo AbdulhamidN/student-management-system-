@@ -7,13 +7,27 @@ import AnnouncementsPage from './pages/public/AnnouncementsPage';
 import LoginPage from './pages/public/LoginPage';
 import RegisterPage from './pages/public/RegisterPage';
 import AdminLayout from './layouts/AdminLayout';
+import TeacherLayout from './layouts/TeacherLayout';
+import StudentLayout from './layouts/StudentLayout';
+
 import Students from './pages/admin/Students';
 import Courses from './pages/admin/Courses';
 import Departments from './pages/admin/Departments';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import Teachers from './pages/admin/Teachers';
+
 import TeacherDashboard from './pages/teacher/TeacherDashboard';
+import TeacherGradebook from './pages/teacher/TeacherGradebook';
+import TeacherStudentRoster from './pages/teacher/TeacherStudentRoster';
+import TeacherProfile from './pages/teacher/TeacherProfile';
+
 import StudentDashboard from './pages/student/StudentDashboard';
+import StudentResults from './pages/student/StudentResults';
+import StudentSelfSchedule from './pages/student/StudentSelfSchedule';
+import StudentExamSchedule from './pages/student/StudentExamSchedule';
+import StudentAnnouncements from './pages/student/StudentAnnouncements';
+import StudentNotifications from './pages/student/StudentNotifications';
+import StudentProfile from './pages/student/StudentProfile';
 
 function ProtectedRoute({ allowedRoles, children }) {
   const { user, isAuthenticated } = useAuth();
@@ -70,22 +84,28 @@ function AppRoutes() {
         path="/teacher"
         element={
           <ProtectedRoute allowedRoles={['teacher']}>
-            <TeacherDashboard />
+            <TeacherLayout darkMode={darkMode} toggleDarkMode={toggleDarkMode} />
           </ProtectedRoute>
         }
       >
-        <Route index element={<TeacherDashboard />} />
+        <Route index element={<Navigate to="/teacher/gradebook" replace />} />
+        <Route path="dashboard" element={<Navigate to="/teacher/gradebook" replace />} />
+        <Route path="gradebook" element={<TeacherGradebook />} />
+        <Route path="profile" element={<TeacherProfile />} />
       </Route>
 
       <Route
         path="/student"
         element={
           <ProtectedRoute allowedRoles={['student']}>
-            <StudentDashboard />
+            <StudentLayout darkMode={darkMode} toggleDarkMode={toggleDarkMode} />
           </ProtectedRoute>
         }
       >
-        <Route index element={<StudentDashboard />} />
+        <Route index element={<Navigate to="/student/results" replace />} />
+        <Route path="dashboard" element={<Navigate to="/student/results" replace />} />
+        <Route path="results" element={<StudentResults />} />
+        <Route path="profile" element={<StudentProfile />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
@@ -104,4 +124,3 @@ function App() {
 }
 
 export default App;
-

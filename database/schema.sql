@@ -50,7 +50,11 @@ CREATE TABLE IF NOT EXISTS students (
 CREATE TABLE IF NOT EXISTS teachers (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL UNIQUE,
+    name VARCHAR(100),
+    department VARCHAR(100),
+    subject VARCHAR(100),
     phone VARCHAR(20),
+    bio TEXT,
     department_id INT NULL,
     is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

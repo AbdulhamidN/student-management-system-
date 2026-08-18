@@ -77,7 +77,7 @@ test('register route rejects duplicate email', async () => {
 
 test('admin can access admin-only route', async () => {
   const original = userModel.findUserById;
-  userModel.findUserById = async () => ({ id: 1, email: 'admin@example.com', role: 'admin', name: 'Admin User' });
+  userModel.findUserById = async () => ({ id: 1, email: 'admin@example.com', role: 'admin', name: 'Admin User', is_active: true });
 
   const token = generateToken({ id: 1, role: 'admin' });
   const response = await request(protectedApp)
@@ -90,7 +90,7 @@ test('admin can access admin-only route', async () => {
 
 test('student cannot access admin-only route', async () => {
   const original = userModel.findUserById;
-  userModel.findUserById = async () => ({ id: 2, email: 'student@example.com', role: 'student', name: 'Student User' });
+  userModel.findUserById = async () => ({ id: 2, email: 'student@example.com', role: 'student', name: 'Student User', is_active: true });
 
   const token = generateToken({ id: 2, role: 'student' });
   const response = await request(protectedApp)

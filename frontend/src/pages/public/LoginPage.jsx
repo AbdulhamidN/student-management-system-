@@ -40,7 +40,11 @@ export default function LoginPage() {
       else if (data.user.role === 'teacher') navigate('/teacher');
       else navigate('/student');
     } catch (err) {
-      setError(err.message || 'Unable to log in');
+      if (err.name === 'TypeError' && err.message.toLowerCase().includes('fetch')) {
+        setError('Cannot connect to backend server. Please make sure the backend API is running on http://localhost:5000');
+      } else {
+        setError(err.message || 'Unable to log in');
+      }
     } finally {
       setIsSubmitting(false);
     }
