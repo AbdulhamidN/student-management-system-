@@ -22,7 +22,50 @@ CREATE TABLE IF NOT EXISTS users (
     password_hash VARCHAR(255) NOT NULL,
     role ENUM('admin', 'teacher', 'student') NOT NULL DEFAULT 'student',
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    failed_login_attempts TINYINT UNSIGNED NOT NULL DEFAULT 0,
+    locked_until DATETIME NULL,
+    password_changed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    mfa_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+    mfa_secret_encrypted VARBINARY(512) NULL,
+    mfa_enrolled_at DATETIME NULL,
+    mfa_last_verified_at DATETIME NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS user_sessions (
+    session_id CHAR(36) PRIMARY KEY,
+    user_id INT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_used_at DATETIME NULL,
+    expires_at DATETIME NOT NULL,
+    revoked_at DATETIME NULL,
+    revocation_reason VARCHAR(100) NULL,
+    user_agent VARCHAR(512) NULL,
+    ip_address VARBINARY(16) NULL,
+    CONSTRAINT fk_user_sessions_user
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_user_sessions_user_id (user_id),
+    INDEX idx_user_sessions_expires_at (expires_at),
+    INDEX idx_user_sessions_revoked_at (revoked_at)
+);
+
+CREATE TABLE IF NOT EXISTS refresh_tokens (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    session_id CHAR(36) NOT NULL,
+    token_hash CHAR(64) NOT NULL UNIQUE,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_used_at DATETIME NULL,
+    expires_at DATETIME NOT NULL,
+    revoked_at DATETIME NULL,
+    revocation_reason VARCHAR(100) NULL,
+    replaced_by_token_id BIGINT UNSIGNED NULL,
+    CONSTRAINT fk_refresh_tokens_session
+        FOREIGN KEY (session_id) REFERENCES user_sessions(session_id) ON DELETE CASCADE,
+    CONSTRAINT fk_refresh_tokens_replacement
+        FOREIGN KEY (replaced_by_token_id) REFERENCES refresh_tokens(id) ON DELETE SET NULL,
+    INDEX idx_refresh_tokens_session_id (session_id),
+    INDEX idx_refresh_tokens_expires_at (expires_at),
+    INDEX idx_refresh_tokens_revoked_at (revoked_at)
 );
 
 CREATE TABLE IF NOT EXISTS courses (

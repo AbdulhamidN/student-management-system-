@@ -26,4 +26,38 @@ async function findUserById(id) {
   return rows[0] || null;
 }
 
-module.exports = { createUser, findUserByEmail, findUserById };
+async function resetFailedLoginAttempts(userId) {
+  await pool.execute(
+    'UPDATE users SET failed_login_attempts = 0, locked_until = NULL WHERE id = ?',
+    [userId]
+  );
+}
+
+async function clearExpiredLock(userId) {
+  await pool.execute(
+    'UPDATE users SET failed_login_attempts = 0, locked_until = NULL WHERE id = ? AND locked_until IS NOT NULL AND locked_until <= CURRENT_TIMESTAMP',
+    [userId]
+  );
+}
+
+async function recordFailedLoginAttempt(userId, lockoutThreshold, lockedUntil) {
+  await pool.execute(
+    `UPDATE users
+     SET failed_login_attempts = failed_login_attempts + 1,
+         locked_until = CASE
+           WHEN failed_login_attempts + 1 >= ? THEN ?
+           ELSE locked_until
+         END
+     WHERE id = ?`,
+    [lockoutThreshold, lockedUntil, userId]
+  );
+}
+
+module.exports = {
+  createUser,
+  findUserByEmail,
+  findUserById,
+  resetFailedLoginAttempts,
+  clearExpiredLock,
+  recordFailedLoginAttempt,
+};

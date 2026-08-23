@@ -3,6 +3,10 @@ const { generateToken } = require('../utils/jwt');
 const userModel = require('../models/userModel');
 const { validateRegistration, validateLogin } = require('../validators/authValidator');
 
+const MAX_FAILED_LOGIN_ATTEMPTS = 5;
+const PASSWORD_MAX_AGE_DAYS = 90;
+const LOCKOUT_DURATION_MINUTES = Math.max(1, Number.parseInt(process.env.LOCKOUT_DURATION_MINUTES || '15', 10));
+
 const stripSensitiveUser = (user) => ({
   id: user.id,
   name: user.name,
@@ -69,11 +73,33 @@ async function loginUser(req, res, next) {
       });
     }
 
-    const isPasswordValid = await bcrypt.compare(validation.sanitized.password, user.password_hash);
-    if (!isPasswordValid) {
+    if (user.locked_until && new Date(user.locked_until).getTime() > Date.now()) {
       return res.status(401).json({
         success: false,
         message: 'Invalid email or password.',
+      });
+    }
+
+    if (user.locked_until) await userModel.clearExpiredLock(user.id);
+
+    const isPasswordValid = await bcrypt.compare(validation.sanitized.password, user.password_hash);
+    if (!isPasswordValid) {
+      const lockedUntil = new Date(Date.now() + LOCKOUT_DURATION_MINUTES * 60 * 1000);
+      await userModel.recordFailedLoginAttempt(user.id, MAX_FAILED_LOGIN_ATTEMPTS, lockedUntil);
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid email or password.',
+      });
+    }
+
+    await userModel.resetFailedLoginAttempts(user.id);
+
+    const passwordChangedAt = new Date(user.password_changed_at || user.created_at);
+    const passwordAge = Date.now() - passwordChangedAt.getTime();
+    if (Number.isNaN(passwordChangedAt.getTime()) || passwordAge > PASSWORD_MAX_AGE_DAYS * 24 * 60 * 60 * 1000) {
+      return res.status(403).json({
+        success: false,
+        message: 'Password has expired. Please reset your password.',
       });
     }
 
