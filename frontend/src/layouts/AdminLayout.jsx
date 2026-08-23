@@ -1,4 +1,5 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { FaMoon, FaSun } from 'react-icons/fa';
 import { useAuth } from '../context/AuthContext';
 
 const AdminLayout = ({ darkMode, toggleDarkMode }) => {
@@ -34,9 +35,11 @@ const AdminLayout = ({ darkMode, toggleDarkMode }) => {
         <div className="flex justify-end items-center mb-6">
           <button 
             onClick={toggleDarkMode} 
-            className="p-2 rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors focus:outline-none"
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 text-gray-700 transition-colors hover:bg-gray-300 focus:outline-none dark:bg-gray-700 dark:text-yellow-300 dark:hover:bg-gray-600"
+            title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+            aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
           >
-            {darkMode ? '🌙' : '☀️'}
+            {darkMode ? <FaSun /> : <FaMoon />}
           </button>
         </div>
         <Outlet />

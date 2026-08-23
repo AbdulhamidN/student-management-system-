@@ -33,17 +33,18 @@ function ProtectedRoute({ allowedRoles, children }) {
 }
 
 function AppRoutes() {
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(() => localStorage.getItem('sms_dark_mode') === 'true');
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode);
+    localStorage.setItem('sms_dark_mode', String(darkMode));
   }, [darkMode]);
 
   const toggleDarkMode = () => setDarkMode((prev) => !prev);
 
   return (
     <Routes>
-      <Route element={<PublicLayout />}>
+      <Route element={<PublicLayout darkMode={darkMode} toggleDarkMode={toggleDarkMode} />}>
         <Route path="/" element={<HomePage />} />
         <Route path="/announcements" element={<AnnouncementsPage />} />
         <Route path="/login" element={<LoginPage />} />

@@ -1,9 +1,8 @@
-import { useState } from 'react';
 import { Outlet, Link, NavLink } from 'react-router-dom';
 import { FaGraduationCap, FaMoon, FaSun } from 'react-icons/fa';
 
-const PublicLayout = () => {
-  const [isDark, setIsDark] = useState(false);
+const PublicLayout = ({ darkMode, toggleDarkMode }) => {
+  const isDark = darkMode;
 
   return (
     <div className={isDark ? 'flex min-h-screen flex-col bg-slate-950 text-slate-100' : 'flex min-h-screen flex-col bg-slate-100 text-slate-800'}>
@@ -31,7 +30,7 @@ const PublicLayout = () => {
             <button
               type="button"
               aria-label="Toggle dark mode"
-              onClick={() => setIsDark((prev) => !prev)}
+              onClick={toggleDarkMode}
               className={isDark
                 ? 'flex items-center gap-2 rounded-full border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-medium text-slate-100 shadow-sm transition hover:border-slate-600'
                 : 'flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:border-slate-300'}
