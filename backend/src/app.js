@@ -27,11 +27,21 @@ const app = express();
 
 const allowedOrigins = [
     process.env.FRONTEND_URL,
-    "http://localhost:3000",
-    "http://127.0.0.1:3000"
+    ...(process.env.NODE_ENV === "production" ? [] : [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000"
+    ])
 ].filter(Boolean);
 
 app.use(helmet({
+    frameguard: { action: "deny" },
+    noSniff: true,
+    referrerPolicy: { policy: "strict-origin-when-cross-origin" },
+    hsts: process.env.NODE_ENV === "production" ? {
+        maxAge: 31536000,
+        includeSubDomains: true,
+        preload: true
+    } : false,
     contentSecurityPolicy: {
         directives: {
             defaultSrc: ["'self'"],
@@ -41,11 +51,17 @@ app.use(helmet({
             fontSrc: ["'self'", "https://fonts.gstatic.com"],
             connectSrc: ["'self'", "http://localhost:5000", "http://localhost:3000"],
             objectSrc: ["'none'"],
-            upgradeInsecureRequests: []
+            upgradeInsecureRequests: process.env.NODE_ENV === "production" ? [] : null,
+            reportUri: ["/api/security/csp-report"]
         }
     },
     crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
+
+app.use((req, res, next) => {
+    res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()");
+    next();
+});
 
 app.use(cors({
     origin: function (origin, callback) {
@@ -63,13 +79,41 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+app.post("/api/security/csp-report", express.json({ type: ["application/csp-report", "application/reports+json"] }), (req, res) => {
+    const report = req.body?.['csp-report'] || req.body;
+    console.warn("CSP violation reported", {
+        documentUri: report?.documentURI || report?.documentURL,
+        violatedDirective: report?.violatedDirective,
+        blockedUri: report?.blockedURI,
+    });
+    return res.status(204).send();
+});
+
 /**
  * =====================================================
  * 2. CUSTOM LOGGER MIDDLEWARE
  * =====================================================
  */
 const logger = require("./middleware/loggerMiddleware");
+const apiGateway = require("./middleware/apiGatewayMiddleware");
+app.use(apiGateway);
 app.use(logger);
+
+app.get('/health', (req, res) => res.json({ status: 'ok' }));
+app.get('/live', (req, res) => res.json({ status: 'alive' }));
+app.get('/ready', async (req, res) => {
+    const { pool } = require('./config/db');
+    const { redisHealth } = require('./config/redis');
+    try {
+        const connection = await pool.getConnection();
+        connection.release();
+        const redis = await redisHealth();
+        if (redis.configured && !redis.healthy) return res.status(503).json({ status: 'not ready' });
+        return res.json({ status: 'ready' });
+    } catch (error) {
+        return res.status(503).json({ status: 'not ready' });
+    }
+});
 
 /**
  * =====================================================

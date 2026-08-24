@@ -13,21 +13,23 @@
  */
 
 const express = require("express");
-const { authenticateToken, requireAdmin } = require("../middleware/authMiddleware");
+const { authenticateToken } = require("../middleware/authMiddleware");
+const { requirePermission } = require("../middleware/authorizationMiddleware");
+const { distributedRateLimit } = require("../middleware/distributedRateLimit");
 const router = express.Router();
-router.use(authenticateToken, requireAdmin);
+router.use(authenticateToken, distributedRateLimit());
 const courseController = require("../controllers/courseController");
 
 // IMPORTANT: specific routes before /:id so "assign" and "student"
 // aren't swallowed by the :id param route
-router.post("/assign", courseController.assignCourseToStudent);
-router.get("/student/:studentId", courseController.getCoursesForStudent);
+router.post("/assign", requirePermission('courses:write'), courseController.assignCourseToStudent);
+router.get("/student/:studentId", requirePermission('courses:read'), courseController.getCoursesForStudent);
 
-router.post("/", courseController.createCourse);
-router.get("/", courseController.getAllCourses);
-router.get("/department/:departmentId", courseController.getCoursesByDepartment);
-router.get("/:id", courseController.getCourseById);
-router.put("/:id", courseController.updateCourse);
-router.delete("/:id", courseController.deleteCourse);
+router.post("/", requirePermission('courses:write'), courseController.createCourse);
+router.get("/", requirePermission('courses:read'), courseController.getAllCourses);
+router.get("/department/:departmentId", requirePermission('courses:read'), courseController.getCoursesByDepartment);
+router.get("/:id", requirePermission('courses:read'), courseController.getCourseById);
+router.put("/:id", requirePermission('courses:write'), courseController.updateCourse);
+router.delete("/:id", requirePermission('courses:write'), courseController.deleteCourse);
 
 module.exports = router;

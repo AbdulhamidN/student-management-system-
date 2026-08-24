@@ -1,4 +1,3 @@
-const jwt = require('jsonwebtoken');
 const { verifyToken } = require('../utils/jwt');
 const userModel = require('../models/userModel');
 
@@ -24,11 +23,20 @@ async function authenticateToken(req, res, next) {
       });
     }
 
+    if (decoded.sid) {
+      const session = await userModel.findSessionById(decoded.sid, user.id);
+      if (!session || session.revoked_at || new Date(session.expires_at).getTime() <= Date.now()) {
+        return res.status(401).json({ success: false, message: 'User session is no longer valid.' });
+      }
+    }
+
     req.user = {
       id: user.id,
       name: user.name,
       email: user.email,
       role: user.role,
+      departmentId: user.department_id,
+      sessionId: decoded.sid || null,
     };
 
     return next();

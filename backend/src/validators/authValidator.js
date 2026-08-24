@@ -5,7 +5,21 @@ const sanitizeText = (value) => {
 
 const sanitizeEmail = (value) => sanitizeText(value).toLowerCase();
 
-const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
+const PASSWORD_MIN_LENGTH = 12;
+
+function validatePassword(password) {
+  const errors = [];
+
+  if (typeof password !== 'string' || password.length < PASSWORD_MIN_LENGTH) {
+    errors.push(`Password must be at least ${PASSWORD_MIN_LENGTH} characters.`);
+  }
+  if (!/[A-Z]/.test(password)) errors.push('Password must include an uppercase letter.');
+  if (!/[a-z]/.test(password)) errors.push('Password must include a lowercase letter.');
+  if (!/\d/.test(password)) errors.push('Password must include a number.');
+  if (!/[^A-Za-z0-9]/.test(password)) errors.push('Password must include a special character.');
+
+  return { isValid: errors.length === 0, errors };
+}
 
 function validateRegistration(data = {}) {
   const sanitizedName = sanitizeText(data.name);
@@ -23,9 +37,7 @@ function validateRegistration(data = {}) {
     errors.push('A valid email address is required.');
   }
 
-  if (!password || !passwordPattern.test(password)) {
-    errors.push('Password must be at least 8 characters and include uppercase, lowercase, a number, and a special character.');
-  }
+  errors.push(...validatePassword(password).errors);
 
   if (!['admin', 'teacher', 'student'].includes(sanitizedRole)) {
     errors.push('Role must be one of: admin, teacher, student.');
@@ -69,6 +81,7 @@ function validateLogin(data = {}) {
 module.exports = {
   sanitizeText,
   sanitizeEmail,
+  validatePassword,
   validateRegistration,
   validateLogin,
 };

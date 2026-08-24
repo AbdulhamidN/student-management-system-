@@ -14,28 +14,20 @@
  */
 
 
-const errorHandler = (err,req,res,next)=>{
-
-
-    console.error(err.stack);
-
-
-
-    res.status(
-
-        err.statusCode || 500
-
-    ).json({
-
-        success:false,
-
-        message:
-        err.message ||
-        "Internal Server Error"
-
+const errorHandler = (err, req, res, next) => {
+    console.error('Unhandled application error', {
+        name: err.name,
+        statusCode: err.statusCode || 500,
+        method: req.method,
+        path: req.originalUrl,
     });
 
-
+    res.status(err.statusCode || 500).json({
+        success: false,
+        message: err.statusCode && err.statusCode < 500
+            ? err.message
+            : 'Internal server error.',
+    });
 };
 
 

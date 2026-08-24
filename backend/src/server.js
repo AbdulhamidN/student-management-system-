@@ -21,6 +21,9 @@ const app = require("./app");
 
 // Import database connection function
 const { connectDB } = require("./config/db");
+const { pool } = require("./config/db");
+const { closeRedis } = require("./config/redis");
+const { closeQueues } = require("./services/jobQueue");
 
 // Read port from environment variables
 const PORT = process.env.PORT || 5000;
@@ -37,7 +40,7 @@ connectDB();
  * Start Express Server
  * -----------------------------------------------------
  */
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
 
     console.log("=================================");
     console.log("🚀 Server Started Successfully");
@@ -45,3 +48,16 @@ app.listen(PORT, () => {
     console.log("=================================");
 
 });
+
+async function gracefulShutdown(signal) {
+    console.log("Server shutdown requested", { signal });
+    server.close(async () => {
+        await closeRedis();
+        await closeQueues();
+        await pool.end();
+        process.exit(0);
+    });
+}
+
+process.on("SIGINT", () => gracefulShutdown("SIGINT"));
+process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
