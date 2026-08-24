@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { API_BASE } from '../api/config';
 
 const AuthContext = createContext(null);
 
@@ -36,7 +37,14 @@ export function AuthProvider({ children }) {
       setToken(authToken);
       setUser(authUser);
     },
-    logout: () => {
+    logout: async () => {
+      if (token) {
+        await fetch(`${API_BASE}/auth/logout`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+          credentials: 'include',
+        }).catch(() => {});
+      }
       setToken('');
       setUser(null);
     },

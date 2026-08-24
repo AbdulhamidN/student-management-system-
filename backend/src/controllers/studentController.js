@@ -1,6 +1,7 @@
 const studentModel = require('../models/studentModel');
 const { parseSpreadsheet, rowsToObjects } = require('../utils/spreadsheetParser');
 const { pool } = require('../config/db');
+const { cacheGet, cacheSet, cacheDeleteByPrefix } = require('../config/redis');
 
 function sanitizeStudentInput(body = {}) {
   return {
@@ -30,6 +31,7 @@ exports.createStudent = async (req, res, next) => {
     }
 
     const result = await studentModel.createStudent(data);
+    await cacheDeleteByPrefix('students:');
     return res.status(201).json({
       success: true,
       message: 'Student created successfully.',
@@ -43,7 +45,14 @@ exports.createStudent = async (req, res, next) => {
 };
 
 exports.getAllStudents = async (req, res, next) => {
-  try { return res.json({ success: true, data: await studentModel.getAllStudents() }); }
+  try {
+    const cacheKey = 'students:all';
+    const cached = await cacheGet(cacheKey);
+    if (cached) return res.json({ success: true, data: cached, cached: true });
+    const students = await studentModel.getAllStudents();
+    await cacheSet(cacheKey, students, 60);
+    return res.json({ success: true, data: students });
+  }
   catch (error) { return next(error); }
 };
 
@@ -65,6 +74,7 @@ exports.updateStudent = async (req, res, next) => {
     }
     const result = await studentModel.updateStudent(req.params.id, data);
     if (!result.affectedRows) return res.status(404).json({ success: false, message: 'Student not found.' });
+    await cacheDeleteByPrefix('students:');
     return res.json({ success: true, message: 'Student updated successfully.' });
   } catch (error) {
     if (error.code === 'ER_DUP_ENTRY') return res.status(409).json({ success: false, message: 'A student or user with this email already exists.' });
@@ -76,6 +86,7 @@ exports.deleteStudent = async (req, res, next) => {
   try {
     const result = await studentModel.deleteStudent(req.params.id);
     if (!result.affectedRows) return res.status(404).json({ success: false, message: 'Student not found.' });
+    await cacheDeleteByPrefix('students:');
     return res.json({ success: true, message: 'Student deactivated successfully.' });
   } catch (error) { return next(error); }
 };

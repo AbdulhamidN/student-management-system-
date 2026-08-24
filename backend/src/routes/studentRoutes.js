@@ -1,22 +1,24 @@
 const express = require('express');
 const studentController = require('../controllers/studentController');
 const upload = require('../middleware/uploadMiddleware');
-const { authenticateToken, requireAdmin } = require('../middleware/authMiddleware');
+const { authenticateToken } = require('../middleware/authMiddleware');
+const { requirePermission, requireAnyPermission, studentRecordPolicy } = require('../middleware/authorizationMiddleware');
+const { distributedRateLimit } = require('../middleware/distributedRateLimit');
 
 const router = express.Router();
-router.use(authenticateToken, requireAdmin);
+router.use(authenticateToken, distributedRateLimit());
 
-router.get('/count', studentController.getStudentCount);
-router.get('/department/:deptId', studentController.getStudentsByDepartment);
-router.post('/import', upload.single('file'), studentController.importStudents);
-router.get('/', studentController.getAllStudents);
-router.post('/', studentController.createStudent);
-router.get('/:id/courses', studentController.getStudentCourses);
-router.put('/:id/courses', studentController.setCourses);
-router.post('/:id/courses', studentController.assignCourse);
-router.delete('/:id/courses/:courseId', studentController.removeCourseFromStudent);
-router.get('/:id', studentController.getStudentById);
-router.put('/:id', studentController.updateStudent);
-router.delete('/:id', studentController.deleteStudent);
+router.get('/count', requirePermission('students:read'), studentController.getStudentCount);
+router.get('/department/:deptId', requirePermission('students:read'), studentController.getStudentsByDepartment);
+router.post('/import', requirePermission('students:write'), upload.single('file'), studentController.importStudents);
+router.get('/', requirePermission('students:read'), studentController.getAllStudents);
+router.post('/', requirePermission('students:write'), studentController.createStudent);
+router.get('/:id/courses', requireAnyPermission(['students:read', 'students:read:own', 'students:read:own-department'], studentRecordPolicy), studentController.getStudentCourses);
+router.put('/:id/courses', requirePermission('students:write'), studentController.setCourses);
+router.post('/:id/courses', requirePermission('students:write'), studentController.assignCourse);
+router.delete('/:id/courses/:courseId', requirePermission('students:write'), studentController.removeCourseFromStudent);
+router.get('/:id', requireAnyPermission(['students:read', 'students:read:own', 'students:read:own-department'], studentRecordPolicy), studentController.getStudentById);
+router.put('/:id', requirePermission('students:write'), studentController.updateStudent);
+router.delete('/:id', requirePermission('students:write'), studentController.deleteStudent);
 
 module.exports = router;

@@ -1,13 +1,15 @@
 const express = require('express');
 const teacherController = require('../controllers/teacherController');
-const { authenticateToken, requireAdmin } = require('../middleware/authMiddleware');
+const { authenticateToken } = require('../middleware/authMiddleware');
+const { requirePermission } = require('../middleware/authorizationMiddleware');
+const { distributedRateLimit } = require('../middleware/distributedRateLimit');
 
 const router = express.Router();
-router.use(authenticateToken, requireAdmin);
-router.get('/', teacherController.getAllTeachers);
-router.post('/', teacherController.createTeacher);
-router.get('/:id/courses', teacherController.getTeacherCourses);
-router.put('/:id', teacherController.updateTeacher);
-router.delete('/:id', teacherController.deleteTeacher);
+router.use(authenticateToken, distributedRateLimit());
+router.get('/', requirePermission('teachers:read'), teacherController.getAllTeachers);
+router.post('/', requirePermission('teachers:write'), teacherController.createTeacher);
+router.get('/:id/courses', requirePermission('teachers:read'), teacherController.getTeacherCourses);
+router.put('/:id', requirePermission('teachers:write'), teacherController.updateTeacher);
+router.delete('/:id', requirePermission('teachers:write'), teacherController.deleteTeacher);
 
 module.exports = router;
