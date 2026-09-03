@@ -1,4 +1,4 @@
-﻿import { apiRequest } from './config';
+import { apiRequest } from './config';
 
 export const getCourses = async () => {
     const response = await apiRequest('/courses');

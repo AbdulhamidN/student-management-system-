@@ -1,3 +1,24 @@
+exports.getMyProfile = async (req, res, next) => {
+  try {
+    const student = await studentModel.getStudentByUserId(req.user.id);
+    if (!student) return res.status(404).json({ success: false, message: 'Student profile not found.' });
+    const courses = await studentModel.getStudentCourses(student.id);
+    return res.json({
+      success: true,
+      data: {
+        id: student.id,
+        userId: student.user_id,
+        name: student.name,
+        email: student.email,
+        phone: student.phone,
+        departmentId: student.department_id,
+        department: student.department_name,
+        courses,
+      },
+    });
+  } catch (error) { return next(error); }
+};
+
 const studentModel = require('../models/studentModel');
 const { parseSpreadsheet, rowsToObjects } = require('../utils/spreadsheetParser');
 const { pool } = require('../config/db');

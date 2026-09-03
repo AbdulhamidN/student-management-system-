@@ -9,6 +9,7 @@ const stripSensitiveUser = (user) => ({
   email: user.email,
   role: user.role,
   isActive: user.is_active,
+  mustChangePassword: Boolean(user.must_change_password),
 });
 
 async function registerUser(req, res, next) {
@@ -90,6 +91,53 @@ async function loginUser(req, res, next) {
   }
 }
 
+async function changeInitialStudentPassword(req, res, next) {
+  try {
+    if (req.user.role !== 'student') {
+      return res.status(403).json({ success: false, message: 'Only students can use the initial password change.' });
+    }
+
+    const { currentPassword, newPassword, confirmPassword } = req.body || {};
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      return res.status(400).json({ success: false, message: 'Current password, new password and confirmation are required.' });
+    }
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({ success: false, message: 'New password and confirmation do not match.' });
+    }
+    if (newPassword.length < 8 || !/[A-Z]/.test(newPassword) || !/[a-z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
+      return res.status(400).json({ success: false, message: 'New password must be at least 8 characters and contain uppercase, lowercase and a number.' });
+    }
+
+    const user = await userModel.findUserByEmail(req.user.email);
+    if (!user || !user.must_change_password) {
+      return res.status(409).json({ success: false, message: 'The initial password has already been changed.' });
+    }
+
+    const validCurrentPassword = await bcrypt.compare(currentPassword, user.password_hash);
+    if (!validCurrentPassword) {
+      return res.status(401).json({ success: false, message: 'Current password is incorrect.' });
+    }
+    if (currentPassword === newPassword) {
+      return res.status(400).json({ success: false, message: 'New password must be different from the temporary password.' });
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    const result = await userModel.changeInitialPassword(user.id, passwordHash);
+    if (!result.affectedRows) {
+      return res.status(409).json({ success: false, message: 'The initial password has already been changed.' });
+    }
+
+    const updatedUser = await userModel.findUserById(user.id);
+    return res.status(200).json({
+      success: true,
+      message: 'Password changed successfully. This initial password change cannot be repeated.',
+      user: stripSensitiveUser(updatedUser),
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
 async function getCurrentUser(req, res) {
   return res.status(200).json({
     success: true,
@@ -101,4 +149,5 @@ module.exports = {
   registerUser,
   loginUser,
   getCurrentUser,
+  changeInitialStudentPassword,
 };

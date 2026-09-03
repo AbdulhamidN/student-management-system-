@@ -1,9 +1,11 @@
 const express = require('express');
 const studentController = require('../controllers/studentController');
 const upload = require('../middleware/uploadMiddleware');
-const { authenticateToken, requireAdmin } = require('../middleware/authMiddleware');
+const { authenticateToken, requireAdmin, requireStudent } = require('../middleware/authMiddleware');
 
 const router = express.Router();
+router.get('/me/profile', authenticateToken, requireStudent, studentController.getMyProfile);
+
 router.use(authenticateToken, requireAdmin);
 
 router.get('/count', studentController.getStudentCount);

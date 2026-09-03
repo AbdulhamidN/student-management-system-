@@ -24,6 +24,18 @@ async function getAllStudents() {
   return rows;
 }
 
+async function getStudentByUserId(userId) {
+  const [rows] = await pool.execute(`
+    SELECT s.id, s.user_id, s.name, s.email, s.phone, s.department_id,
+           d.name AS department_name
+    FROM students s
+    LEFT JOIN departments d ON d.id = s.department_id
+    WHERE s.user_id = ? AND s.is_deleted = FALSE
+    LIMIT 1
+  `, [userId]);
+  return rows[0] || null;
+}
+
 async function getStudentById(id, connection = pool) {
   const [rows] = await connection.execute(`
     SELECT s.id, s.user_id, s.name, s.email, s.phone, s.department_id,
@@ -203,6 +215,7 @@ module.exports = {
   normalizeStudent,
   getAllStudents,
   getStudentById,
+  getStudentByUserId,
   getActiveStudentCount,
   getStudentsByDepartment,
   createStudent,

@@ -17,7 +17,7 @@ async function authenticateToken(req, res, next) {
     const decoded = verifyToken(token);
     const user = await userModel.findUserById(decoded.id);
 
-    if (!user || !user.is_active) {
+    if (!user || user.is_active === false) {
       return res.status(401).json({
         success: false,
         message: 'User session is no longer valid.',
@@ -29,6 +29,7 @@ async function authenticateToken(req, res, next) {
       name: user.name,
       email: user.email,
       role: user.role,
+      mustChangePassword: Boolean(user.must_change_password),
     };
 
     return next();

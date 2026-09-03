@@ -83,10 +83,12 @@ const courseRoutes = require("./routes/courseRoutes");
 const authRoutes = require("./routes/authRoutes");
 const announcementRoutes = require("./routes/announcementRoutes");
 const protectedRoutes = require("./routes/protectedRoutes");
+const dashboardRoutes = require("./routes/dashboardRoutes");
 
 app.use("/api/auth", authRoutes);
 app.use("/api/announcements", announcementRoutes);
 app.use("/api/protected", protectedRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/students", studentRoutes);
 app.use("/api/teachers", teacherRoutes);
 app.use("/api/departments", departmentRoutes);

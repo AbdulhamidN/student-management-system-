@@ -754,12 +754,12 @@ https://github.com/AbdulhamidN/student-management-system
 
 ## 👥 Team Members & Responsibilities
 
-| Member          | Role                                              |
-| --------------- | ------------------------------------------------- |
-| Abdulhamid Nuri | 🛡️ Backend development and project administration |
-| Hayidar         | 🎨 Frontend Developer                             |
-| Adnan           | 🎨 Frontend Developer                             |
-| Chala Wodajo    | 📝 Report / Documentation                         |
+| **Member**          | **Role**                                                         |
+| ------------------- | ---------------------------------------------------------------- |
+| **Abdulhamid Nuri** | 🛡️ Backend Development & Project Administration                  |
+| **Hayidar**         | 🎨 Teacher Panel Development                                     |
+| **Adnan**           | 🎨 Student Panel Development                                     |
+| **Chala Wodajo**    | 📝 Admin Panel Development, Admin Backend & Report/Documentation |
 
 ## 🔐 Configuration & Security
 

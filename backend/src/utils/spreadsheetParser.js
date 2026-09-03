@@ -122,12 +122,21 @@ function parseXlsx(buffer) {
   const rels = entries.get('xl/_rels/workbook.xml.rels');
   if (!workbook || !rels) throw new Error('Invalid XLSX: workbook metadata is missing.');
 
-  const firstSheet = workbook.toString('utf8').match(/<sheet\b[^>]*r:id="([^"]+)"[^>]*>/i);
+  const workbookXml = workbook.toString('utf8');
+  const firstSheet = workbookXml.match(/<sheet\b[^>]*>/i);
   if (!firstSheet) throw new Error('XLSX does not contain a worksheet.');
-  const relationId = firstSheet[1];
-  const rel = rels.toString('utf8').match(new RegExp(`<Relationship[^>]*Id="${relationId}"[^>]*Target="([^"]+)"[^>]*/?>`, 'i'));
-  if (!rel) throw new Error('XLSX worksheet relationship is missing.');
-  let target = rel[1].replace(/^\//, '');
+  const relationId = firstSheet[0].match(/\br:id="([^"]+)"/i)?.[1];
+  if (!relationId) throw new Error('XLSX worksheet relationship ID is missing.');
+
+  const relationshipTags = [...rels.toString('utf8').matchAll(/<Relationship\b[^>]*>/gi)];
+  const relationship = relationshipTags.find((match) => {
+    const tag = match[0];
+    return tag.match(/\bId="([^"]+)"/i)?.[1] === relationId;
+  });
+  const targetValue = relationship?.[0].match(/\bTarget="([^"]+)"/i)?.[1];
+  if (!targetValue) throw new Error('XLSX worksheet relationship is missing.');
+
+  let target = targetValue.replace(/^\//, '');
   if (!target.startsWith('xl/')) target = `xl/${target}`;
 
   const sheet = entries.get(target);

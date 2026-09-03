@@ -1,4 +1,4 @@
-﻿import { apiRequest } from './config';
+import { apiRequest } from './config';
 
 export const getDepartments = async () => {
     const response = await apiRequest('/departments');
